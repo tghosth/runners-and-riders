@@ -70,9 +70,6 @@ The flap animation cycles through a random subset of the character set before la
 ### 4. Text Input
 A `<textarea>` above the display accepts multi-line Hebrew input (`dir="rtl"`). A **"Set Display"** button triggers the flip sequence. A default message is pre-loaded on page load.
 
-### 5. Resize Control
-A range slider (`<input type="range">`) labelled "גודל" (size) scales the board from 50 % to 200 % of its base size via a CSS custom property `--board-scale`.
-
 ---
 
 ## Animation Sequence
@@ -117,10 +114,10 @@ A thin horizontal line (1 px, dark ochre) between the halves simulates the physi
 
 ## Responsive / Resizable Behaviour
 
-- Cell width is derived from the viewport so `--cells-across` (default 15) cells fit the screen: `--cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px)`. Height tracks 4:3.
-- The `--board-scale` CSS variable is layered on top via `transform: scale()` for fine adjustment.
+- Cell width is derived from the viewport so up to `--cells-across` (max 13) cells fit the screen: `--cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px)`. Height tracks 4:3.
+- `buildGrid` sets `--cells-across` on `.board` to the actual longest-line length (capped at 13), so short messages render at the 96 px ceiling instead of being stretched.
 - The board centres horizontally with `margin: auto`.
-- Lines longer than 15 characters overflow horizontally inside the frame (`overflow: auto`).
+- Lines longer than 13 characters are truncated at input time (`renderMessage` slices each line to `MAX_COLS`).
 
 ---
 
@@ -173,7 +170,7 @@ The workflow can also be triggered manually via **Actions → Deploy to GitHub P
 - **Flap mechanism** — each cell has two static halves (top + bottom) showing the *current* character. A third element, `.flap`, sits over the top half showing the *next* character. On the final landing flip, that flap rotates `0deg → -90deg` around its bottom edge; on animation end, both static halves are updated to the new character and the flap is reset.
 - **RTL handling** — the board has `dir="rtl"`, so the default flex row already lays children right-to-left. JS appends characters in logical order (`char[0]` first → visually rightmost) followed by trailing padding cells which fill the left side, right-aligning short lines.
 - **Stagger** — cells fire sequentially across rows (~35 ms apart) so the cascade reads from top-right to bottom-left, like a real platform board.
-- **Resize** — a `--board-scale` CSS variable on `:root` is updated by the slider and applied via `transform: scale()` on `.board`.
+- **Sizing** — `MAX_COLS = 13` is the hard cap on flaps per row. `buildGrid` sets `--cells-across` on `.board` to the longest-line length (1–13), and the CSS clamp on `--cell-w` derives cell size from there.
 
 ---
 
@@ -189,6 +186,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 - **Stone texture + engraved letters.** Replaced the solid stone-colour gradients on each flap with a procedural Jerusalem-stone SVG (`stone.svg`) used as `background-image`. The SVG layers four `feTurbulence` filters (mottle, grain, fine speckle, sparse veins) over a warm-cream base, producing a no-dependency limestone material. Each cell randomises `--bg-x` / `--bg-y` so flaps don't repeat, and the bottom half samples a deterministically-offset region from the top so the two halves don't mirror identical pixels. The light/shadow gradient layer was kept on top of the texture (lighter on the upper flap, darker on the lower) to preserve the perceived flap shape. Letters are now styled as **engraved**: the colour is shifted to `rgba(60, 46, 30, 0.78)` (close to the stone) and a paired `text-shadow` (dark above, cream highlight below) gives a chiselled-groove appearance with a top-down light source. The `pages.yml` `sed` step was extended to also rewrite `__COMMIT_SHA__` in `style.css` so the SVG cache-buster works post-deploy.
 
 - **Photographic stone texture.** Replaced the procedural `stone.svg` with `stone.jpg` — a 1024×1024 seamless honed-meleke photo (CC0). Same `--stone-texture` plumbing, smoother finish, more believable mineral variation. ~260 KB JPEG, downscaled to 360 px in CSS.
+
+- **Removed size slider; capped board at 13 cells across.** Dropped the `<input type="range">`, the `--board-scale` CSS variable, and the `transform: scale()` on `.board`. Introduced `MAX_COLS = 13` in `app.js`: `renderMessage` truncates each line to 13 characters, and `buildGrid` writes the actual longest-line length (1–13) onto `--cells-across` on `.board`. The existing `--cell-w` clamp picks up the per-render value, so short messages render at the 96 px ceiling instead of being stretched to fill the row.
 
 ---
 

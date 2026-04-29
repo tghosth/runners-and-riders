@@ -19,12 +19,14 @@
   --stone-tile: 360px 360px;
 
   /* 6rem subtraction is the chrome budget: main padding +
-     frame padding + frame border + 14 cell gaps. */
-  --cells-across: 15;
+     frame padding + frame border + 12 cell gaps.
+     Hard cap is 13 cells; JS overrides --cells-across on .board to the
+     actual longest-row length (capped at 13) so short messages don't
+     stretch cells beyond their 96px ceiling. */
+  --cells-across: 13;
   --cell-gap: 4px;
   --cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px);
   --cell-h: calc(var(--cell-w) * 4 / 3);
-  --board-scale: 1;
 }
 
 * { box-sizing: border-box; }
@@ -65,8 +67,8 @@ html, body {
 }
 
 main {
-  /* Wide enough for 15 cells at the upper clamp (96px) plus chrome. */
-  max-width: 1700px;
+  /* Wide enough for 13 cells at the upper clamp (96px) plus chrome. */
+  max-width: 1500px;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -91,9 +93,6 @@ main {
   flex-direction: column;
   gap: var(--cell-gap);
   align-items: center;
-  transform: scale(var(--board-scale));
-  transform-origin: top center;
-  transition: transform 0.2s ease;
   width: fit-content;
   margin: 0 auto;
 }
@@ -289,27 +288,6 @@ main {
 .controls button:hover { filter: brightness(1.05); }
 .controls button:active { transform: translateY(1px); }
 
-.size-label {
-  display: flex !important;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0 !important;
-  font-weight: 700;
-}
-
-.size-label input[type="range"] {
-  flex: 1;
-  min-width: 140px;
-  accent-color: var(--ochre);
-}
-
-#size-value {
-  min-width: 3.5em;
-  text-align: center;
-  color: var(--walnut);
-  font-variant-numeric: tabular-nums;
-}
-
 .page-footer {
   text-align: center;
   padding: 1.5rem 1rem 2.5rem;
@@ -331,5 +309,4 @@ main {
     animation: none;
     display: none;
   }
-  .board { transition: none; }
 }

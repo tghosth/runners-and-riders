@@ -11,14 +11,13 @@
   const CYCLE_INTERVAL_MS = 70;
   const MIN_CYCLES = 4;
   const MAX_CYCLES = 12;
+  const MAX_COLS = 13;
 
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const board = document.getElementById('board');
   const messageInput = document.getElementById('message');
   const setBtn = document.getElementById('set-btn');
-  const sizeSlider = document.getElementById('size');
-  const sizeValue = document.getElementById('size-value');
 
   /**
    * Each cell is { el, topSpan, bottomSpan, flapSpan, current, timer }.
@@ -136,7 +135,8 @@
     board.innerHTML = '';
     cells.length = 0;
 
-    const cols = Math.max(1, ...lines.map((l) => Array.from(l).length));
+    const cols = Math.min(MAX_COLS, Math.max(1, ...lines.map((l) => Array.from(l).length)));
+    board.style.setProperty('--cells-across', String(cols));
 
     for (let r = 0; r < lines.length; r += 1) {
       const rowEl = document.createElement('div');
@@ -173,7 +173,10 @@
   }
 
   function renderMessage(text) {
-    const lines = text.split(/\r?\n/);
+    const lines = text.split(/\r?\n/).map((l) => {
+      const chars = Array.from(l);
+      return chars.length > MAX_COLS ? chars.slice(0, MAX_COLS).join('') : l;
+    });
     const grid = buildGrid(lines);
 
     let cellIndex = 0;
@@ -197,12 +200,6 @@
       e.preventDefault();
       renderMessage(messageInput.value);
     }
-  });
-
-  sizeSlider.addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value);
-    document.documentElement.style.setProperty('--board-scale', String(v));
-    sizeValue.textContent = `${Math.round(v * 100)}%`;
   });
 
   // Build SHA — replaced by the deploy workflow; left as the literal token
