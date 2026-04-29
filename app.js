@@ -136,7 +136,6 @@
     cells.length = 0;
 
     const cols = Math.min(MAX_COLS, Math.max(1, ...lines.map((l) => Array.from(l).length)));
-    board.style.setProperty('--cells-across', String(cols));
 
     for (let r = 0; r < lines.length; r += 1) {
       const rowEl = document.createElement('div');
@@ -145,11 +144,23 @@
       const rowChars = Array.from(lines[r]);
       const rowCells = [];
 
-      // The board has dir="rtl" so the first appended cell sits on the right.
-      // No padding cells — each row sizes to its own char count, and the
-      // board's `align-items: center` (flex column) centres shorter rows
-      // within the longest-row width. Chars are appended in logical order
-      // (char[0] → visually rightmost) so RTL reading order is preserved.
+      // Every row has exactly `cols` cells so flex sizing yields uniform
+      // cell widths across rows. Padding is split around the chars to
+      // visually centre each line; for odd totals the extra cell goes to
+      // padAfter (visual left = end of line in RTL).
+      // Board has dir="rtl" so the first appended cell sits on the right;
+      // chars are appended in logical order (char[0] → visually rightmost).
+      const padTotal = cols - rowChars.length;
+      const padBefore = Math.floor(padTotal / 2);
+      const padAfter = padTotal - padBefore;
+      const appendPad = () => {
+        const cell = createCell();
+        setCellChar(cell, ' ');
+        cell._target = ' ';
+        rowEl.appendChild(cell.el);
+        rowCells.push(cell);
+      };
+      for (let i = 0; i < padBefore; i += 1) appendPad();
       for (let i = 0; i < rowChars.length; i += 1) {
         const cell = createCell();
         setCellChar(cell, ' ');
@@ -157,6 +168,7 @@
         rowEl.appendChild(cell.el);
         rowCells.push(cell);
       }
+      for (let i = 0; i < padAfter; i += 1) appendPad();
 
       cells.push(rowCells);
       board.appendChild(rowEl);
