@@ -202,6 +202,22 @@
     sizeValue.textContent = `${Math.round(v * 100)}%`;
   });
 
+  // Build SHA — replaced by the deploy workflow; left as the literal token
+  // when running locally so we display "dev" instead.
+  const buildShaEl = document.getElementById('build-sha');
+  if (buildShaEl) {
+    const meta = document.querySelector('meta[name="build-sha"]');
+    const sha = meta && meta.content;
+    if (sha && !sha.includes('__COMMIT_SHA__')) {
+      const short = sha.slice(0, 7);
+      const link = document.createElement('a');
+      link.href = `https://github.com/tghosth/runners-and-riders/commit/${sha}`;
+      link.textContent = short;
+      link.rel = 'noopener';
+      buildShaEl.replaceChildren(link);
+    }
+  }
+
   // Initial render with default message
   renderMessage(messageInput.value);
 })();
