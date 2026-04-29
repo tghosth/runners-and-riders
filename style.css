@@ -13,8 +13,9 @@
 
   /* Jerusalem stone slab texture — shared across every flap face so each
      cell looks cut from the same piece. Each cell randomises its
-     background-position via --bg-x / --bg-y for natural variation. */
-  --stone-texture: url("stone.svg?v=__COMMIT_SHA__");
+     background-position via --bg-x / --bg-y for natural variation.
+     Source: 1024×1024 seamless meleke photo (CC0, ChatGPT-generated). */
+  --stone-texture: url("stone.jpg?v=__COMMIT_SHA__");
   --stone-tile: 360px 360px;
 
   /* 6rem subtraction is the chrome budget: main padding +
