@@ -1,0 +1,285 @@
+:root {
+  /* Jerusalem stone palette */
+  --stone-bg: #f5ecd7;
+  --stone-light: #ede0c2;
+  --stone-mid: #e8d5a3;
+  --stone-shadow: #c9a96e;
+  --stone-deep: #a78043;
+  --ochre: #8b6914;
+  --walnut: #3d2b1f;
+  --walnut-dark: #25160b;
+  --ink: #1a0f00;
+  --brass: #d4a017;
+
+  /* Cell dimensions */
+  --cell-w: 48px;
+  --cell-h: 64px;
+  --cell-gap: 4px;
+  --board-scale: 1;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.4) 0%, transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(139,105,20,0.15) 0%, transparent 50%),
+    var(--stone-bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: 'Frank Ruhl Libre', 'Times New Roman', serif;
+  min-height: 100vh;
+}
+
+.page-header {
+  text-align: center;
+  padding: 2rem 1rem 1rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--walnut);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+  color: var(--ochre);
+  font-style: italic;
+  letter-spacing: 0.08em;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* ─── Display housing ────────────────────────────────────────── */
+.display-frame {
+  background: linear-gradient(180deg, var(--walnut) 0%, var(--walnut-dark) 100%);
+  border: 4px solid var(--ochre);
+  border-radius: 14px;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.08),
+    inset 0 -2px 8px rgba(0,0,0,0.6),
+    0 12px 30px rgba(61, 43, 31, 0.4),
+    0 2px 4px rgba(0,0,0,0.3);
+  overflow: auto;
+  margin-bottom: 1.5rem;
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+  align-items: center;
+  transform: scale(var(--board-scale));
+  transform-origin: top center;
+  transition: transform 0.2s ease;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.board-row {
+  display: flex;
+  flex-direction: row-reverse; /* RTL: first char on the right */
+  gap: var(--cell-gap);
+}
+
+/* ─── Flap cell ──────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  perspective: 240px;
+  background: var(--walnut-dark);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,0.6),
+    inset 0 0 4px rgba(0,0,0,0.7);
+}
+
+.cell .half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-h) * 0.7);
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--stone-mid) 0%, var(--stone-shadow) 100%);
+  backface-visibility: hidden;
+  user-select: none;
+}
+
+.cell .half.top {
+  top: 0;
+  border-radius: 4px 4px 0 0;
+  border-bottom: 1px solid rgba(0,0,0,0.55);
+  background: linear-gradient(180deg, var(--stone-light) 0%, var(--stone-mid) 100%);
+  align-items: flex-end;
+}
+
+.cell .half.top span {
+  transform: translateY(50%);
+}
+
+.cell .half.bottom {
+  bottom: 0;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, var(--stone-shadow) 0%, var(--stone-deep) 100%);
+  align-items: flex-start;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.25);
+}
+
+.cell .half.bottom span {
+  transform: translateY(-50%);
+}
+
+/* The flipping flap (covers the top half during animation) */
+.cell .flap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 50%;
+  background: linear-gradient(180deg, var(--stone-light) 0%, var(--stone-mid) 100%);
+  border-radius: 4px 4px 0 0;
+  border-bottom: 1px solid rgba(0,0,0,0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: calc(var(--cell-h) * 0.7);
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  backface-visibility: hidden;
+  z-index: 2;
+}
+
+.cell .flap span {
+  transform: translateY(50%);
+  user-select: none;
+}
+
+.cell.flipping .flap {
+  animation: fold-down 220ms ease-in forwards;
+}
+
+@keyframes fold-down {
+  0%   { transform: rotateX(0deg); }
+  100% { transform: rotateX(-90deg); }
+}
+
+/* ─── Controls ───────────────────────────────────────────────── */
+.controls {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--stone-shadow);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 6px rgba(61, 43, 31, 0.15);
+  backdrop-filter: blur(2px);
+}
+
+.controls label {
+  display: block;
+  font-weight: 700;
+  color: var(--walnut);
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.controls textarea {
+  width: 100%;
+  font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1.15rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--stone-deep);
+  border-radius: 8px;
+  background: var(--stone-bg);
+  color: var(--ink);
+  resize: vertical;
+  min-height: 4em;
+}
+
+.controls textarea:focus {
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.controls button {
+  font-family: 'Frank Ruhl Libre', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0.55rem 1.4rem;
+  background: linear-gradient(180deg, var(--brass) 0%, var(--ochre) 100%);
+  color: var(--walnut-dark);
+  border: 1px solid var(--ochre);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(61,43,31,0.25), inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: transform 0.08s ease;
+}
+
+.controls button:hover { filter: brightness(1.05); }
+.controls button:active { transform: translateY(1px); }
+
+.size-label {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0 !important;
+  font-weight: 700;
+}
+
+.size-label input[type="range"] {
+  flex: 1;
+  min-width: 140px;
+  accent-color: var(--ochre);
+}
+
+#size-value {
+  min-width: 3.5em;
+  text-align: center;
+  color: var(--walnut);
+  font-variant-numeric: tabular-nums;
+}
+
+.page-footer {
+  text-align: center;
+  padding: 1.5rem 1rem 2.5rem;
+  color: var(--ochre);
+  opacity: 0.8;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .cell.flipping .flap {
+    animation: none;
+    display: none;
+  }
+  .board { transition: none; }
+}

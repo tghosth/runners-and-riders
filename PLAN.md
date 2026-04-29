@@ -135,11 +135,44 @@ A thin horizontal line (1 px, dark ochre) between the halves simulates the physi
 
 ## Deliverables Checklist
 
-- [ ] `index.html` — page structure, Google Font import, textarea, slider, board container
-- [ ] `style.css` — Jerusalem stone colour theme, flap cell layout, 3D keyframe animations
-- [ ] `app.js` — Hebrew character set, flip engine, stagger scheduler, resize handler
-- [ ] Default Hebrew message pre-loaded (e.g. `שלום ירושלים`)
+- [x] `index.html` — page structure, Google Font import, textarea, slider, board container
+- [x] `style.css` — Jerusalem stone colour theme, flap cell layout, 3D keyframe animations
+- [x] `app.js` — Hebrew character set, flip engine, stagger scheduler, resize handler
+- [x] Default Hebrew message pre-loaded (`שלום ירושלים` + 3 more lines)
+- [x] GitHub Pages deployment workflow (`.github/workflows/pages.yml`)
 - [ ] Tested in Chrome and Firefox
+
+---
+
+## Deployment — GitHub Pages
+
+A workflow at `.github/workflows/pages.yml` deploys the site automatically on every push to `main`:
+
+1. Checks out the repo
+2. Configures Pages (`actions/configure-pages@v5`)
+3. Uploads the repo root as a Pages artifact
+4. Deploys via `actions/deploy-pages@v4`
+
+### One-time enablement (manual step in GitHub UI)
+Pages must be enabled in the repository before the first deploy succeeds:
+
+1. Open **Settings → Pages**
+2. Under **Build and deployment → Source**, select **GitHub Actions**
+
+After this, every push to `main` will rebuild and publish the site at:
+`https://tghosth.github.io/runners-and-riders/`
+
+The workflow can also be triggered manually via **Actions → Deploy to GitHub Pages → Run workflow**.
+
+---
+
+## Implementation Notes
+
+- **Character set** — Hebrew alphabet (incl. final forms ך ם ן ף ץ), space, punctuation (`. , ! ? ־ ׳ ״`), digits 0–9.
+- **Flap mechanism** — each cell has two static halves (top + bottom) showing the *current* character. A third element, `.flap`, sits over the top half showing the *next* character. On a flip, that flap rotates `0deg → -90deg` around its bottom edge; on animation end, both static halves are updated to the new character and the flap is reset.
+- **RTL handling** — rows use `flex-direction: row-reverse` so logical index 0 lands on the right. Short lines are padded on the logical-left so they align to the right edge visually.
+- **Stagger** — cells fire sequentially across rows (~35 ms apart) so the cascade reads from top-right to bottom-left, like a real platform board.
+- **Resize** — a `--board-scale` CSS variable on `:root` is updated by the slider and applied via `transform: scale()` on `.board`.
 
 ---
 

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לוח יציאות — Jerusalem Stone Split-Flap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="page-header">
+    <h1>לוח יציאות</h1>
+    <p class="subtitle">Jerusalem Stone Split-Flap Display</p>
+  </header>
+
+  <main>
+    <section class="display-frame" aria-label="לוח יציאות מתפצל">
+      <div id="board" class="board" dir="rtl"></div>
+    </section>
+
+    <section class="controls" dir="rtl">
+      <label for="message">הודעה</label>
+      <textarea
+        id="message"
+        rows="4"
+        dir="rtl"
+        lang="he"
+        spellcheck="false"
+        placeholder="הקלידו טקסט כאן…">שלום ירושלים
+ברוכים הבאים
+רכבת לתל אביב
+שעה שמונה בערב</textarea>
+
+      <div class="control-row">
+        <button id="set-btn" type="button">הצג על הלוח</button>
+
+        <label for="size" class="size-label">
+          גודל
+          <input id="size" type="range" min="0.5" max="2" step="0.05" value="1">
+          <span id="size-value">100%</span>
+        </label>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <small>אבן ירושלמית · Frank Ruhl Libre</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
