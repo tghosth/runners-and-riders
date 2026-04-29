@@ -117,10 +117,10 @@ A thin horizontal line (1 px, dark ochre) between the halves simulates the physi
 
 ## Responsive / Resizable Behaviour
 
-- Base cell size: `48px × 64px`
-- The `--board-scale` CSS variable is applied to the `.board` wrapper
-- The board centres horizontally with `margin: auto`
-- On small viewports, the slider starts at a reduced default scale
+- Cell width is derived from the viewport so `--cells-across` (default 15) cells fit the screen: `--cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px)`. Height tracks 4:3.
+- The `--board-scale` CSS variable is layered on top via `transform: scale()` for fine adjustment.
+- The board centres horizontally with `margin: auto`.
+- Lines longer than 15 characters overflow horizontally inside the frame (`overflow: auto`).
 
 ---
 

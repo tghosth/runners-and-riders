@@ -11,10 +11,12 @@
   --ink: #1f1610;
   --brass: #9c7f4a;
 
-  /* Cell dimensions */
-  --cell-w: 48px;
-  --cell-h: 64px;
+  /* 6rem subtraction is the chrome budget: main padding +
+     frame padding + frame border + 14 cell gaps. */
+  --cells-across: 15;
   --cell-gap: 4px;
+  --cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px);
+  --cell-h: calc(var(--cell-w) * 4 / 3);
   --board-scale: 1;
 }
 
@@ -56,7 +58,8 @@ html, body {
 }
 
 main {
-  max-width: 1200px;
+  /* Wide enough for 15 cells at the upper clamp (96px) plus chrome. */
+  max-width: 1700px;
   margin: 0 auto;
   padding: 1rem;
 }
