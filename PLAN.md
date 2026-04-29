@@ -1,0 +1,151 @@
+# Hebrew Split-Flap Display — Implementation Plan
+
+## Overview
+
+A single-page web app that renders multi-line Hebrew text as an animated split-flap (Solari board) display, styled with the warm cream/amber tones of Jerusalem stone.
+
+---
+
+## Visual Design
+
+### Jerusalem Stone Palette
+| Role | Hex | Notes |
+|---|---|---|
+| Background | `#F5ECD7` | Warm limestone cream |
+| Flap face (lit) | `#E8D5A3` | Polished stone surface |
+| Flap face (shadow) | `#C9A96E` | Shadowed lower half |
+| Flap border / housing | `#8B6914` | Dark ochre, iron bracket feel |
+| Display surround | `#3D2B1F` | Deep walnut, cast-iron frame |
+| Text | `#1A0F00` | Near-black ink on stone |
+| Accent glow | `#D4A017` | Warm brass highlight |
+
+### Typography
+- Font: **Frank Ruhl Libre** (Google Fonts) — classical Hebrew newspaper/stone-engraving style
+- Direction: `rtl`, `unicode-bidi: bidi-override`
+- Weight: 700 for maximum legibility on small flaps
+
+---
+
+## Architecture
+
+```
+/
+├── index.html          # Single HTML file, all self-contained
+├── style.css           # Jerusalem stone theme + flap animation
+├── app.js              # Split-flap engine + Hebrew character set
+└── PLAN.md             # This file
+```
+
+Single-file deployment is an acceptable alternative (everything inlined into `index.html`) for maximum portability.
+
+---
+
+## Component Breakdown
+
+### 1. Flap Character Cell
+Each character occupies a fixed-size card split horizontally:
+- **Top half** — shows the character's upper portion (static during idle)
+- **Bottom half** — shows the character's lower portion (static during idle)
+- On flip: a CSS 3D rotation animates the **departing** top/bottom halves while the new character's halves slide in, mimicking a mechanical flap
+
+```
+┌──────────┐
+│  upper   │  ← top-half div, rotateX(0) → rotateX(-90deg)
+├──────────┤
+│  lower   │  ← bottom-half div, rotateX(90deg) → rotateX(0)
+└──────────┘
+```
+
+### 2. Display Grid
+- N rows × M columns of flap cells
+- Row count and column count are derived from the longest line and line count of the input text
+- Cells not occupied by a character display a blank flap (space character)
+- The grid width is resizable via a range slider (scales the entire board via CSS `transform: scale()`)
+
+### 3. Character Set
+Hebrew Unicode block: `א`–`ת` (alef–tav, 22 letters) plus final forms `ךכםמנףפץצ` and space, punctuation, digits.
+
+The flap animation cycles through a random subset of the character set before landing on the target character, just like a real Solari board.
+
+### 4. Text Input
+A `<textarea>` above the display accepts multi-line Hebrew input (`dir="rtl"`). A **"Set Display"** button triggers the flip sequence. A default message is pre-loaded on page load.
+
+### 5. Resize Control
+A range slider (`<input type="range">`) labelled "גודל" (size) scales the board from 50 % to 200 % of its base size via a CSS custom property `--board-scale`.
+
+---
+
+## Animation Sequence
+
+```
+For each character position [row][col]:
+  1. Schedule a staggered timeout: delay = (row * cols + col) * STAGGER_MS
+  2. Begin cycling: pick random Hebrew chars at CYCLE_INTERVAL_MS
+  3. After CYCLE_COUNT flips, land on target character
+  4. Apply CSS class .flap-flip for the 3D fold animation per flip
+```
+
+Constants (tunable):
+- `STAGGER_MS` = 40 ms per cell offset
+- `CYCLE_INTERVAL_MS` = 80 ms between random flips
+- `CYCLE_COUNT` = 6–10 random flips before settling
+
+---
+
+## CSS Animation Detail
+
+```css
+/* Each flap cell */
+.cell { perspective: 200px; }
+
+/* Top half folds away */
+@keyframes fold-top {
+  0%   { transform: rotateX(0deg); }
+  100% { transform: rotateX(-90deg); }
+}
+
+/* Bottom half unfolds in */
+@keyframes unfold-bottom {
+  0%   { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+```
+
+A thin horizontal line (1 px, dark ochre) between the halves simulates the physical gap between flap panels.
+
+---
+
+## Responsive / Resizable Behaviour
+
+- Base cell size: `48px × 64px`
+- The `--board-scale` CSS variable is applied to the `.board` wrapper
+- The board centres horizontally with `margin: auto`
+- On small viewports, the slider starts at a reduced default scale
+
+---
+
+## Accessibility
+
+- `lang="he"` on the `<html>` element
+- `dir="rtl"` on the board and input
+- `aria-label` on the display region describing it as a split-flap board
+- Reduced-motion media query: when `prefers-reduced-motion: reduce`, characters update instantly without animation
+
+---
+
+## Deliverables Checklist
+
+- [ ] `index.html` — page structure, Google Font import, textarea, slider, board container
+- [ ] `style.css` — Jerusalem stone colour theme, flap cell layout, 3D keyframe animations
+- [ ] `app.js` — Hebrew character set, flip engine, stagger scheduler, resize handler
+- [ ] Default Hebrew message pre-loaded (e.g. `שלום ירושלים`)
+- [ ] Tested in Chrome and Firefox
+
+---
+
+## Out of Scope (v1)
+
+- Server-side rendering
+- Sound effects
+- Saving/loading messages
+- Vowel diacritics (niqqud) — display consonants only for clean flap sizing
