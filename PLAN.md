@@ -168,7 +168,7 @@ The workflow can also be triggered manually via **Actions → Deploy to GitHub P
 
 - **Character set** — Hebrew alphabet (incl. final forms ך ם ן ף ץ), space, punctuation (`. , ! ? ־ ׳ ״`), digits 0–9.
 - **Flap mechanism** — each cell has two static halves (top + bottom) showing the *current* character. A third element, `.flap`, sits over the top half showing the *next* character. On the final landing flip, that flap rotates `0deg → -90deg` around its bottom edge; on animation end, both static halves are updated to the new character and the flap is reset.
-- **RTL handling** — the board has `dir="rtl"`, so the default flex row already lays children right-to-left. JS appends characters in logical order (`char[0]` first → visually rightmost) followed by trailing padding cells which fill the left side, right-aligning short lines.
+- **RTL handling** — the board has `dir="rtl"`, so the default flex row already lays children right-to-left. JS appends `padBefore` cells first (visually rightmost), then characters in logical order (`char[0]` → visually rightmost char), then `padAfter` cells (visually leftmost), centring each row. For odd padding totals the extra cell goes to `padAfter` (the visual left, which is the end of the line in RTL).
 - **Stagger** — cells fire sequentially across rows (~35 ms apart) so the cascade reads from top-right to bottom-left, like a real platform board.
 - **Sizing** — `MAX_COLS = 13` is the hard cap on flaps per row. `buildGrid` sets `--cells-across` on `.board` to the longest-line length (1–13), and the CSS clamp on `--cell-w` derives cell size from there.
 
@@ -188,6 +188,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 - **Photographic stone texture.** Replaced the procedural `stone.svg` with `stone.jpg` — a 1024×1024 seamless honed-meleke photo (CC0). Same `--stone-texture` plumbing, smoother finish, more believable mineral variation. ~260 KB JPEG, downscaled to 360 px in CSS.
 
 - **Removed size slider; capped board at 13 cells across.** Dropped the `<input type="range">`, the `--board-scale` CSS variable, and the `transform: scale()` on `.board`. Introduced `MAX_COLS = 13` in `app.js`: `renderMessage` truncates each line to 13 characters, and `buildGrid` writes the actual longest-line length (1–13) onto `--cells-across` on `.board`. The existing `--cell-w` clamp picks up the per-render value, so short messages render at the 96 px ceiling instead of being stretched to fill the row.
+
+- **Lighter wood frame, centred rows.** Display housing switched from dark walnut to a honey-oak gradient (`--wood-light` / `--wood-dark`); inset highlight/shadow tuned for the lighter tone. `buildGrid` now splits padding cells around the chars (`padBefore` / `padAfter`) so each row is centred within the board instead of right-aligned. Odd padding totals bias the extra cell to `padAfter` (visual left = end of line in RTL).
 
 ---
 

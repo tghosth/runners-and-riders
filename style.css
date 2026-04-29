@@ -11,6 +11,10 @@
   --ink: #1f1610;
   --brass: #9c7f4a;
 
+  /* Display housing — light honey-oak gradient, warmer than walnut. */
+  --wood-light: #c9a57a;
+  --wood-dark: #8e6a3e;
+
   /* Jerusalem stone slab texture — shared across every flap face so each
      cell looks cut from the same piece. Each cell randomises its
      background-position via --bg-x / --bg-y for natural variation.
@@ -75,15 +79,15 @@ main {
 
 /* ─── Display housing ────────────────────────────────────────── */
 .display-frame {
-  background: linear-gradient(180deg, var(--walnut) 0%, var(--walnut-dark) 100%);
+  background: linear-gradient(180deg, var(--wood-light) 0%, var(--wood-dark) 100%);
   border: 4px solid var(--ochre);
   border-radius: 14px;
   padding: clamp(0.75rem, 2vw, 1.5rem);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    inset 0 -2px 8px rgba(0,0,0,0.45),
-    0 8px 22px rgba(36, 27, 20, 0.3),
-    0 2px 4px rgba(0,0,0,0.2);
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -2px 8px rgba(0,0,0,0.25),
+    0 8px 22px rgba(36, 27, 20, 0.25),
+    0 2px 4px rgba(0,0,0,0.18);
   overflow: auto;
   margin-bottom: 1.5rem;
 }
