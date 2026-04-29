@@ -18,15 +18,13 @@
   --stone-texture: url("stone.jpg?v=__COMMIT_SHA__");
   --stone-tile: 360px 360px;
 
-  /* 6rem subtraction is the chrome budget: main padding +
-     frame padding + frame border + 12 cell gaps.
-     Hard cap is 13 cells; JS overrides --cells-across on .board to the
-     actual longest-row length (capped at 13) so short messages don't
-     stretch cells beyond their 96px ceiling. */
-  --cells-across: 13;
+  /* Cells flex to fill the frame so the whole board always fits the
+     viewport with no horizontal scroll. Hard cap is 13 cells across
+     (MAX_COLS in app.js); rows are padded so every row has the same
+     count, keeping cell width uniform. Per-cell sizing (width / height
+     / font-size) is derived from the cell's own size via container
+     queries — no --cell-w / --cell-h vars needed. */
   --cell-gap: 4px;
-  --cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px);
-  --cell-h: calc(var(--cell-w) * 4 / 3);
 }
 
 * { box-sizing: border-box; }
@@ -67,7 +65,7 @@ html, body {
 }
 
 main {
-  /* Wide enough for 13 cells at the upper clamp (96px) plus chrome. */
+  /* Caps the board on wide screens; cells flex-fill within. */
   max-width: 1500px;
   margin: 0 auto;
   padding: 1rem;
@@ -84,7 +82,7 @@ main {
     inset 0 -2px 8px rgba(0,0,0,0.45),
     0 8px 22px rgba(36, 27, 20, 0.3),
     0 2px 4px rgba(0,0,0,0.2);
-  overflow: auto;
+  overflow: hidden;
   margin-bottom: 1.5rem;
 }
 
@@ -92,9 +90,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--cell-gap);
-  align-items: center;
-  width: fit-content;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .board-row {
@@ -102,13 +98,17 @@ main {
   /* dir="rtl" on the board already lays children right-to-left;
      a row-reverse here would double-reverse and read LTR. */
   gap: var(--cell-gap);
+  width: 100%;
 }
 
 /* ─── Flap cell ──────────────────────────────────────────────── */
 .cell {
   position: relative;
-  width: var(--cell-w);
-  height: var(--cell-h);
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  /* Establish a containment context so descendants can size with cqw/cqi. */
+  container-type: inline-size;
   perspective: 240px;
   background: var(--walnut-dark);
   border-radius: 4px;
@@ -126,7 +126,8 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--cell-h) * 0.7);
+  /* 93cqi ≈ 0.7 × cell-height (cell aspect 3:4, height = 4/3 × width). */
+  font-size: 93cqi;
   line-height: 1;
   font-weight: 700;
   /* Engraved-letter colour: very close to the stone, slightly darker so the
@@ -199,7 +200,8 @@ main {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  font-size: calc(var(--cell-h) * 0.7);
+  /* 93cqi ≈ 0.7 × cell-height (cell aspect 3:4, height = 4/3 × width). */
+  font-size: 93cqi;
   line-height: 1;
   font-weight: 700;
   color: rgba(60, 46, 30, 0.78);

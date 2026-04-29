@@ -114,8 +114,9 @@ A thin horizontal line (1 px, dark ochre) between the halves simulates the physi
 
 ## Responsive / Resizable Behaviour
 
-- Cell width is derived from the viewport so up to `--cells-across` (max 13) cells fit the screen: `--cell-w: clamp(16px, calc((100vw - 6rem) / var(--cells-across)), 96px)`. Height tracks 4:3.
-- `buildGrid` sets `--cells-across` on `.board` to the actual longest-line length (capped at 13), so short messages render at the 96 px ceiling instead of being stretched.
+- Cells flex-fill the frame: `.cell { flex: 1 1 0; min-width: 0; aspect-ratio: 3 / 4 }` inside `.board-row { display: flex; width: 100% }`. The frame has `overflow: hidden` so the board always fits the viewport — no horizontal scroll on small screens.
+- Font size scales with the cell via container queries (`container-type: inline-size; font-size: 93cqi`).
+- `MAX_COLS = 13` caps the row count; `buildGrid` pads every row to the longest-line length (1–13) so all rows have the same number of cells and uniform width.
 - The board centres horizontally with `margin: auto`.
 - Lines longer than 13 characters are truncated at input time (`renderMessage` slices each line to `MAX_COLS`).
 
@@ -170,7 +171,7 @@ The workflow can also be triggered manually via **Actions → Deploy to GitHub P
 - **Flap mechanism** — each cell has two static halves (top + bottom) showing the *current* character. A third element, `.flap`, sits over the top half showing the *next* character. On the final landing flip, that flap rotates `0deg → -90deg` around its bottom edge; on animation end, both static halves are updated to the new character and the flap is reset.
 - **RTL handling** — the board has `dir="rtl"`, so the default flex row already lays children right-to-left. JS appends only the actual characters (no padding cells) in logical order (`char[0]` → visually rightmost). The board is a flex column with `align-items: center`, so each row sizes to its own char count and shorter rows are centred within the longest-row width.
 - **Stagger** — cells fire sequentially across rows (~35 ms apart) so the cascade reads from top-right to bottom-left, like a real platform board.
-- **Sizing** — `MAX_COLS = 13` is the hard cap on flaps per row. `buildGrid` sets `--cells-across` on `.board` to the longest-line length (1–13), and the CSS clamp on `--cell-w` derives cell size from there.
+- **Sizing** — `MAX_COLS = 13` is the hard cap on flaps per row. Every row is padded to the longest-line length so flap counts match across rows, and cells use `flex: 1 1 0` + `aspect-ratio: 3 / 4` so they fill the frame uniformly. Font size scales with each cell via `container-type: inline-size` + `font-size: 93cqi`.
 
 ---
 
@@ -192,6 +193,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 - **Lighter wood frame, centred rows.** Display housing switched from dark walnut to a honey-oak gradient (`--wood-light` / `--wood-dark`); inset highlight/shadow tuned for the lighter tone. `buildGrid` now splits padding cells around the chars (`padBefore` / `padAfter`) so each row is centred within the board instead of right-aligned. Odd padding totals bias the extra cell to `padAfter` (visual left = end of line in RTL).
 
 - **Reverted to walnut frame; row centring via flex.** The lighter wood didn't suit the design — restored the original `--walnut` / `--walnut-dark` gradient on `.display-frame` and the original inset highlight/shadow values. The `padBefore` / `padAfter` split also didn't visually centre rows the way intended (a 12-char row in a 13-cell grid still looked right-leaning), so `buildGrid` now creates **no padding cells at all** — each row sizes to its own char count and the board's `align-items: center` (flex column) centres shorter rows within the longest-row width. `--cells-across` is still set from the longest line so cell width stays consistent across rows.
+
+- **Uniform rows + flex-fill cells; no horizontal scroll.** Brought padding cells back so every row has the same flap count (= longest-line length, capped at 13) and switched cell sizing to `flex: 1 1 0` + `aspect-ratio: 3 / 4`. The board's row is `width: 100%`, so cells share the available frame width equally and the entire board scales to fit the viewport on any screen. Removed the `--cells-across` / `--cell-w` / `--cell-h` clamp plumbing — no longer needed. Font size now scales with each cell via `container-type: inline-size` + `font-size: 93cqi`. `.display-frame { overflow: hidden }` so nothing scrolls left/right. Padding within rows is split around the chars (`padBefore` / `padAfter`) so each line is visually centred.
 
 ---
 
