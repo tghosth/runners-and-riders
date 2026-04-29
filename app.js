@@ -146,22 +146,10 @@
       const rowCells = [];
 
       // The board has dir="rtl" so the first appended cell sits on the right.
-      // Split the padding around the chars so each row is centered: padBefore
-      // cells appended first (visually rightmost), then chars in logical order
-      // (char[0] → visually rightmost char), then padAfter cells (visually
-      // leftmost). For odd totals, the extra pad goes to padAfter — the visual
-      // left, which is the end of the line in RTL.
-      const padTotal = cols - rowChars.length;
-      const padBefore = Math.floor(padTotal / 2);
-      const padAfter = padTotal - padBefore;
-      const appendPad = () => {
-        const cell = createCell();
-        setCellChar(cell, ' ');
-        cell._target = ' ';
-        rowEl.appendChild(cell.el);
-        rowCells.push(cell);
-      };
-      for (let i = 0; i < padBefore; i += 1) appendPad();
+      // No padding cells — each row sizes to its own char count, and the
+      // board's `align-items: center` (flex column) centres shorter rows
+      // within the longest-row width. Chars are appended in logical order
+      // (char[0] → visually rightmost) so RTL reading order is preserved.
       for (let i = 0; i < rowChars.length; i += 1) {
         const cell = createCell();
         setCellChar(cell, ' ');
@@ -169,7 +157,6 @@
         rowEl.appendChild(cell.el);
         rowCells.push(cell);
       }
-      for (let i = 0; i < padAfter; i += 1) appendPad();
 
       cells.push(rowCells);
       board.appendChild(rowEl);
