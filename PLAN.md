@@ -188,6 +188,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 
 - **Stone texture + engraved letters.** Replaced the solid stone-colour gradients on each flap with a procedural Jerusalem-stone SVG (`stone.svg`) used as `background-image`. The SVG layers four `feTurbulence` filters (mottle, grain, fine speckle, sparse veins) over a warm-cream base, producing a no-dependency limestone material. Each cell randomises `--bg-x` / `--bg-y` so flaps don't repeat, and the bottom half samples a deterministically-offset region from the top so the two halves don't mirror identical pixels. The light/shadow gradient layer was kept on top of the texture (lighter on the upper flap, darker on the lower) to preserve the perceived flap shape. Letters are now styled as **engraved**: the colour is shifted to `rgba(60, 46, 30, 0.78)` (close to the stone) and a paired `text-shadow` (dark above, cream highlight below) gives a chiselled-groove appearance with a top-down light source. The `pages.yml` `sed` step was extended to also rewrite `__COMMIT_SHA__` in `style.css` so the SVG cache-buster works post-deploy.
 
+- **Photographic stone texture.** Replaced the procedural `stone.svg` with `stone.jpg` — a 1024×1024 seamless honed-meleke photo (CC0). Same `--stone-texture` plumbing, smoother finish, more believable mineral variation. ~260 KB JPEG, downscaled to 360 px in CSS.
+
 ---
 
 ## Out of Scope (v1)
