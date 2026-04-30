@@ -21,24 +21,10 @@
       <div id="board" class="board" dir="rtl"></div>
     </section>
 
-    <section class="controls" dir="rtl">
-      <label for="message">הודעה</label>
-      <textarea
-        id="message"
-        rows="7"
-        dir="rtl"
-        lang="he"
-        spellcheck="false"
-        placeholder="הקלידו טקסט כאן…">שלום ירושלים
-ברוכים הבאים
-רכבת לתל אביב
-שעה שמונה בערב
-רציף שלוש
-רכבת לחיפה
-נסיעה בטוחה</textarea>
-
+    <section class="controls">
       <div class="control-row">
-        <button id="set-btn" type="button">הצג על הלוח</button>
+        <label for="date-pick">בחר תאריך</label>
+        <input type="date" id="date-pick" dir="ltr">
       </div>
     </section>
   </main>
@@ -47,6 +33,7 @@
     <small>אבן ירושלמית · Frank Ruhl Libre · <span id="build-sha" dir="ltr">dev</span></small>
   </footer>
 
+  <script src="vendor/hebcal-core.min.js"></script>
   <script src="app.js?v=__COMMIT_SHA__"></script>
 </body>
 </html>

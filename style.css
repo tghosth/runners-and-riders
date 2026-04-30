@@ -272,27 +272,23 @@ main {
 }
 
 .controls label {
-  display: block;
   font-weight: 700;
   color: var(--walnut);
-  margin-bottom: 0.5rem;
   font-size: 1.05rem;
 }
 
-.controls textarea {
-  width: 100%;
+.controls input[type="date"] {
   font-family: 'Frank Ruhl Libre', serif;
-  font-size: 1.15rem;
-  padding: 0.6rem 0.8rem;
+  font-size: 1.05rem;
+  padding: 0.45rem 0.8rem;
   border: 1px solid var(--stone-deep);
   border-radius: 8px;
   background: var(--stone-bg);
   color: var(--ink);
-  resize: vertical;
-  min-height: 4em;
+  cursor: pointer;
 }
 
-.controls textarea:focus {
+.controls input[type="date"]:focus {
   outline: 2px solid var(--brass);
   outline-offset: 1px;
 }

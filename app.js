@@ -14,9 +14,63 @@
   const MAX_CYCLES = 22;
   const MAX_COLS = 13;
 
+  const { HDate, HebrewCalendar } = window.hebcal;
+
+  // ─── Liturgical logic (see LITURGY.md) ────────────────────────
+
+  // Remove Hebrew niqqud (vowel points + cantillation, U+0591–U+05C7).
+  function stripNiqqud(str) {
+    return str.replace(/[֑-ׇ]/g, '');
+  }
+
+  // Israel: say "תן טל ומטר" from 7 Marcheshvan through 14 Nisan.
+  function isTalUMatar(hMonth, hDay) {
+    if (hMonth === 8 && hDay >= 7) return true;   // 7+ Marcheshvan
+    if (hMonth >= 9 && hMonth <= 13) return true;  // Kislev – Adar(II)
+    if (hMonth === 1 && hDay <= 14) return true;   // 1–14 Nisan
+    return false;
+  }
+
+  // Israel: say "מוריד הגשם" from 22 Tishrei (Shemini Atzeret) through 14 Nisan.
+  function isMoridHaGeshem(hMonth, hDay) {
+    if (hMonth === 7 && hDay >= 22) return true;   // 22+ Tishrei
+    if (hMonth >= 8 && hMonth <= 13) return true;  // Marcheshvan – Adar(II)
+    if (hMonth === 1 && hDay <= 14) return true;   // 1–14 Nisan
+    return false;
+  }
+
+  // Return the parsha name (Hebrew, no niqqud, no prefix) for the Shabbat
+  // of the week containing jsDate. Returns '' on Yom Tov weeks with no
+  // regular portion.
+  function getParshaForDate(jsDate) {
+    const shabbat = new Date(jsDate);
+    const dow = shabbat.getDay(); // 0=Sun … 6=Sat
+    if (dow !== 6) shabbat.setDate(shabbat.getDate() + (6 - dow));
+    const hd = new HDate(shabbat);
+    let events;
+    try {
+      events = HebrewCalendar.calendar({ start: hd, end: hd, sedrot: true, il: true, locale: 'he' });
+    } catch { return ''; }
+    const ev = events.find(e => { try { return e.render('en').startsWith('Parashat'); } catch { return false; } });
+    if (!ev) return '';
+    const title = stripNiqqud((ev.render('he') || ev.render('en')) || '');
+    // Strip "פרשת " (Hebrew) or "Parashat " (English) prefix
+    return title.replace(/^(פרשת|Parashat)\s+/, '');
+  }
+
+  // Build the three-line display text for a given JS date.
+  // Pads to 7 rows with blank lines so the board looks full.
+  function getDisplayText(jsDate) {
+    const hd = new HDate(jsDate);
+    const hMonth = hd.getMonth();
+    const hDay = hd.getDate();
+    const parshah = getParshaForDate(jsDate) || 'אין פרשה';
+    const line2 = isTalUMatar(hMonth, hDay) ? 'תן טל ומטר' : 'תן ברכה';
+    const line3 = isMoridHaGeshem(hMonth, hDay) ? 'מוריד הגשם' : 'מוריד הטל';
+    return `${parshah}\n${line2}\n${line3}\n\n\n\n`;
+  }
+
   const board = document.getElementById('board');
-  const messageInput = document.getElementById('message');
-  const setBtn = document.getElementById('set-btn');
 
   // Header-row layout: 13 cells total. Up to TIME_COLS (5) cells of
   // "HH:MM" go on the visual left, up to DATE_COLS (8) cells of Hebrew
@@ -331,16 +385,16 @@
     }
   }
 
-  // ─── Wire up controls ──────────────────────────────────────────
-  setBtn.addEventListener('click', () => {
-    renderMessage(messageInput.value);
-  });
+  // ─── Date picker ───────────────────────────────────────────────
+  const dateInput = document.getElementById('date-pick');
 
-  messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      renderMessage(messageInput.value);
-    }
+  // Default to today in Jerusalem time (en-CA locale gives YYYY-MM-DD)
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  dateInput.value = todayStr;
+
+  dateInput.addEventListener('change', () => {
+    const [y, m, d] = dateInput.value.split('-').map(Number);
+    renderMessage(getDisplayText(new Date(y, m - 1, d)));
   });
 
   // Build SHA — replaced by the deploy workflow; left as the literal token
@@ -359,10 +413,9 @@
     }
   }
 
-  // Initial render with default message — the header row's flap cells
-  // already carry the current date/time as their cycle targets, so no
-  // immediate updateClock() is needed.
-  renderMessage(messageInput.value);
+  // Initial render for today
+  const [ty, tm, td] = todayStr.split('-').map(Number);
+  renderMessage(getDisplayText(new Date(ty, tm - 1, td)));
 
   // Re-tick on each wall-clock minute boundary. setTimeout (rescheduled
   // every tick) instead of setInterval keeps us aligned to the real
