@@ -165,23 +165,21 @@ main {
   font-size: 93cqi;
   line-height: 1;
   font-weight: 700;
-  /* Engraved-letter colour: very close to the stone, slightly darker so the
-     shadow/highlight pair below carries the carved illusion. */
-  color: rgba(60, 46, 30, 0.78);
+  color: var(--ink);
   background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.28) 0%, rgba(120,101,69,0.05) 100%),
+    linear-gradient(180deg, rgba(255,247,228,0.72) 0%, rgba(220,205,178,0.50) 100%),
     var(--stone-texture);
   background-size: auto, var(--stone-tile);
   background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
   background-repeat: no-repeat, repeat;
   backface-visibility: hidden;
   user-select: none;
-  /* Engraved letter shadow: dark above, light highlight below — light
-     reading from above, simulating a chiselled groove. */
+  /* Chiselled-groove shadow: deeper dark above + brighter highlight below
+     read more clearly against the lighter stone face. */
   text-shadow:
-    0 -1px 0 rgba(0, 0, 0, 0.55),
-    0 1px 0 rgba(255, 246, 224, 0.5),
-    0 0 1px rgba(0, 0, 0, 0.35);
+    0 -1px 1px rgba(0, 0, 0, 0.75),
+    0  1px 1px rgba(255, 250, 235, 0.90),
+    0  0   2px rgba(0, 0, 0, 0.20);
 }
 
 .cell .half.top {
@@ -189,7 +187,7 @@ main {
   border-radius: 4px 4px 0 0;
   border-bottom: 1px solid rgba(0,0,0,0.4);
   background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.32) 0%, rgba(120,101,69,0.04) 100%),
+    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
     var(--stone-texture);
   align-items: flex-end;
 }
@@ -202,7 +200,7 @@ main {
   bottom: 0;
   border-radius: 0 0 4px 4px;
   background-image:
-    linear-gradient(180deg, rgba(58,47,38,0.18) 0%, rgba(36,27,20,0.32) 100%),
+    linear-gradient(180deg, rgba(220,205,178,0.55) 0%, rgba(180,160,130,0.45) 100%),
     var(--stone-texture);
   /* Deterministic offset from the top so the bottom half shows a *different*
      slice of the slab (otherwise both halves mirror identical pixels). */
@@ -225,7 +223,7 @@ main {
   top: 0;
   height: 50%;
   background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.32) 0%, rgba(120,101,69,0.04) 100%),
+    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
     var(--stone-texture);
   background-size: auto, var(--stone-tile);
   background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
@@ -239,11 +237,11 @@ main {
   font-size: 93cqi;
   line-height: 1;
   font-weight: 700;
-  color: rgba(60, 46, 30, 0.78);
+  color: var(--ink);
   text-shadow:
-    0 -1px 0 rgba(0, 0, 0, 0.55),
-    0 1px 0 rgba(255, 246, 224, 0.5),
-    0 0 1px rgba(0, 0, 0, 0.35);
+    0 -1px 1px rgba(0, 0, 0, 0.75),
+    0  1px 1px rgba(255, 250, 235, 0.90),
+    0  0   2px rgba(0, 0, 0, 0.20);
   overflow: hidden;
   transform-origin: 50% 100%;
   z-index: 2;
