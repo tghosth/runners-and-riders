@@ -49,6 +49,9 @@
     <small>אבן ירושלמית · Frank Ruhl Libre · <span id="build-sha" dir="ltr">dev</span></small>
   </footer>
 
+  <!-- Temporal polyfill — must load before hebcal-core, since the
+       bundle's Zmanim class uses Temporal.PlainDate at construction. -->
+  <script src="vendor/temporal-polyfill.min.js?v=__COMMIT_SHA__"></script>
   <script src="vendor/hebcal-core.min.js"></script>
   <script src="liturgy.js?v=__COMMIT_SHA__"></script>
   <script src="app.js?v=__COMMIT_SHA__"></script>

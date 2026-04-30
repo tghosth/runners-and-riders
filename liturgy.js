@@ -16,6 +16,24 @@
     'אחרי מות־קדשים': 'אחרי מ־קדושים',
   };
 
+  // Hebcal flag — events emitted only on a Shabbat that announces the
+  // upcoming Rosh Chodesh. Mirrors the value baked into the bundle so we
+  // don't depend on it being exposed on `flags`.
+  const FLAG_SHABBAT_MEVARCHIM = 32768;
+
+  // The four parshiyot + Shabbat HaGadol — Hebcal returns them as
+  // separate events alongside the regular parsha. We render them with
+  // the "פרשת" prefix the user expects (Hebcal's stock Hebrew uses
+  // "שבת" for all five, which is correct for HaGadol but unusual for
+  // the four parshiyot).
+  const SPECIAL_SHABBAT_MAP = {
+    'Shabbat HaGadol':   'שבת הגדול',
+    'Shabbat HaChodesh': 'פרשת החודש',
+    'Shabbat Parah':     'פרשת פרה',
+    'Shabbat Shekalim':  'פרשת שקלים',
+    'Shabbat Zachor':    'פרשת זכור',
+  };
+
   // Strip Hebrew niqqud + cantillation (U+0591–U+05C7) but preserve the
   // maqaf (U+05BE) — it's inside the same Unicode range yet is a real
   // punctuation character used between words like אחרי מות־קדשים.
@@ -47,7 +65,11 @@
   function getDayInfo(jsDate) {
     const hd = new HDate(jsDate);
     let events = [];
-    try { events = HebrewCalendar.calendar({ start: hd, end: hd, il: true }) || []; } catch {}
+    try {
+      events = HebrewCalendar.calendar({
+        start: hd, end: hd, il: true, shabbatMevarchim: true,
+      }) || [];
+    } catch {}
 
     const getFlags = e => { try { return e.getFlags(); } catch { return 0; } };
     const renderEn = e => { try { return e.render('en') || ''; } catch { return ''; } };
@@ -60,7 +82,10 @@
       const name = /pesach|passover/i.test(en) ? 'חול המועד פסח'
                  : /sukkot/i.test(en)          ? 'ח המועד סוכות'
                  : renderHe(cholHamoed);
-      return { holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false };
+      return {
+        holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false,
+        roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
+      };
     }
 
     // Major Yom Tov — Hebcal Hebrew rendering + יעלה ויבוא
@@ -71,7 +96,10 @@
       if (/Rosh Hashana/i.test(renderEn(yomTov))) {
         if (hd.getMonth() === 7 && hd.getDate() === 1) name = 'ראש השנה א׳';
       }
-      return { holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false };
+      return {
+        holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false,
+        roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
+      };
     }
 
     // Rosh Chodesh — no row-1 override, but יעלה ויבוא is said
@@ -89,7 +117,25 @@
     const specialDay = specialEv ? renderHe(specialEv) : '';
     const alHaNisim = !!chanukahOrPurim;
 
-    return { holidayName: '', yaalehVeYavo: roshChodesh, specialDay, alHaNisim };
+    // Parshiyot + Shabbat HaGadol — keyed by Hebcal's English desc so we
+    // can pick our own Hebrew label rather than the stock "שבת ..." one.
+    const specialShabbatEv = events.find(e => {
+      try { return !!SPECIAL_SHABBAT_MAP[e.getDesc()]; } catch { return false; }
+    });
+    const specialShabbat = specialShabbatEv
+      ? SPECIAL_SHABBAT_MAP[specialShabbatEv.getDesc()] : '';
+
+    const shabbatMevarchim = events.some(e => !!(getFlags(e) & FLAG_SHABBAT_MEVARCHIM));
+
+    return {
+      holidayName: '',
+      yaalehVeYavo: roshChodesh,
+      specialDay,
+      alHaNisim,
+      roshChodesh,
+      specialShabbat,
+      shabbatMevarchim,
+    };
   }
 
   // Next parsha on or after the Shabbat of jsDate's week. Skips weeks
@@ -115,21 +161,142 @@
     return '';
   }
 
-  // Build the body text for a given JS date — always 7 rows so the grid
-  // stays full. See LITURGY.md for row order.
+  // ─── Sefirat HaOmer (Ashkenaz) ─────────────────────────────────
+  // Day N (1..49) is counted on Hebrew date 16 Nisan + (N-1), through
+  // 5 Sivan. Returns 0 outside that window.
+  function getOmerDay(hd) {
+    const start = new HDate(16, 1 /* Nisan */, hd.getFullYear());
+    const diff = hd.abs() - start.abs();
+    if (diff < 0 || diff > 48) return 0;
+    return diff + 1;
+  }
+
+  // Masculine cardinal forms used in the Sefirat HaOmer text.
+  // CONSTRUCT (שני, חמשה …) sits directly before a noun: "שני ימים".
+  // ABSOLUTE (שנים, חמשה …) is used in compound numbers: "שנים ועשרים".
+  // Note "אחד / שלשה / ארבעה / חמשה / ששה / שבעה / שמונה / תשעה" coincide
+  // between the two forms — only "שני / שנים" actually differ.
+  const NUM_CONSTRUCT = ['', 'אחד', 'שני', 'שלשה', 'ארבעה', 'חמשה', 'ששה', 'שבעה', 'שמונה', 'תשעה'];
+  const NUM_ABSOLUTE  = ['', 'אחד', 'שנים', 'שלשה', 'ארבעה', 'חמשה', 'ששה', 'שבעה', 'שמונה', 'תשעה'];
+
+  function omerDayPhrase(n) {
+    if (n === 1) return 'יום אחד';
+    if (n < 10) return NUM_CONSTRUCT[n] + ' ימים';
+    if (n === 10) return 'עשרה ימים';
+    if (n < 20) return NUM_ABSOLUTE[n - 10] + ' עשר יום';
+    if (n === 20) return 'עשרים יום';
+    if (n < 30) return NUM_ABSOLUTE[n - 20] + ' ועשרים יום';
+    if (n === 30) return 'שלשים יום';
+    if (n < 40) return NUM_ABSOLUTE[n - 30] + ' ושלשים יום';
+    if (n === 40) return 'ארבעים יום';
+    return NUM_ABSOLUTE[n - 40] + ' וארבעים יום';
+  }
+
+  function omerWeekPhrase(weeks, days) {
+    let weekP;
+    if (weeks === 1) weekP = 'שבוע אחד';
+    else if (weeks === 2) weekP = 'שני שבועות';
+    else weekP = NUM_CONSTRUCT[weeks] + ' שבועות';
+    if (days === 0) return 'שהם ' + weekP;
+    if (days === 1) return 'שהם ' + weekP + ' ויום אחד';
+    return 'שהם ' + weekP + ' ו' + NUM_CONSTRUCT[days] + ' ימים';
+  }
+
+  // Returns the full Ashkenazi single-line text for omer day n, e.g.
+  //   "היום שלשה ושלשים יום שהם ארבעה שבועות וחמשה ימים לעומר"
+  function omerFullText(n) {
+    let txt = 'היום ' + omerDayPhrase(n);
+    if (n >= 7) {
+      const weeks = Math.floor(n / 7);
+      const rem = n % 7;
+      txt += ' ' + omerWeekPhrase(weeks, rem);
+    }
+    return txt + ' לעומר';
+  }
+
+  // Word-balanced split into exactly k lines — picks the word
+  // boundaries that minimise the longest line. Recursive DP, fine for
+  // sefira-sized text (≤ ~10 words). Returns { lines, maxLen } or
+  // null if k > word count.
+  function balancedSplitInto(words, k) {
+    if (k > words.length) return null;
+    function rec(start, linesLeft) {
+      if (linesLeft === 1) {
+        const rest = words.slice(start).join(' ');
+        return { lines: [rest], maxLen: Array.from(rest).length };
+      }
+      let best = null;
+      for (let i = start + 1; i <= words.length - linesLeft + 1; i++) {
+        const head = words.slice(start, i).join(' ');
+        const sub = rec(i, linesLeft - 1);
+        if (!sub) continue;
+        const maxLen = Math.max(Array.from(head).length, sub.maxLen);
+        if (!best || maxLen < best.maxLen) {
+          best = { lines: [head, ...sub.lines], maxLen };
+        }
+      }
+      return best;
+    }
+    return rec(0, k);
+  }
+
+  // Splits Hebrew text into the smallest number of lines (1..maxLines)
+  // whose longest line fits maxLineLen characters. If even the
+  // maxLines split overflows, falls back to that split anyway — the
+  // layout still renders, just with a clipped row. Used by the sefira
+  // footer; the parameters live in app.js so layout concerns stay out
+  // of the liturgy module.
+  function splitBalancedLines(text, maxLines, maxLineLen) {
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [];
+    if (words.length === 1) return [text];
+    let fallback = null;
+    for (let k = 1; k <= maxLines; k++) {
+      const r = balancedSplitInto(words, k);
+      if (!r) break;
+      if (r.maxLen <= maxLineLen) return r.lines;
+      fallback = r;
+    }
+    return fallback ? fallback.lines : [text];
+  }
+
+  // The sefira section rendered separately at the bottom of the board
+  // on smaller flap cells (see .board-footer in style.css). Returns
+  // the day number + the unwrapped Ashkenazi text; app.js does the
+  // line-wrapping itself with FOOTER_COLS / FOOTER_MAX_LINES so layout
+  // tuning doesn't have to round-trip through this file.
+  function getOmerSection(jsDate) {
+    const hd = new HDate(jsDate);
+    const n = getOmerDay(hd);
+    if (n === 0) return null;
+    return { day: n, fullText: omerFullText(n) };
+  }
+
+  // Build the body text for a given JS date — always at least 7 rows so
+  // the grid stays full on a "quiet" day. Special days add more rows;
+  // during Sefirat HaOmer the count is appended as its own section after
+  // a blank-row separator.
   function getDisplayText(jsDate) {
     const hd = new HDate(jsDate);
     const hMonth = hd.getMonth();
     const hDay = hd.getDate();
-    const { holidayName, yaalehVeYavo, specialDay, alHaNisim } = getDayInfo(jsDate);
+    const info = getDayInfo(jsDate);
+    const {
+      holidayName, yaalehVeYavo, specialDay, alHaNisim,
+      roshChodesh, specialShabbat, shabbatMevarchim,
+    } = info;
     const row1 = holidayName || getParshaForDate(jsDate);
     const talRow = isTalUMatar(hMonth, hDay) ? 'תן טל ומטר' : 'תן ברכה';
     const geshem = isMoridHaGeshem(hMonth, hDay) ? 'מוריד הגשם' : 'מוריד הטל';
+
     const rows = [row1];
-    if (specialDay) rows.push(specialDay);
-    if (yaalehVeYavo) rows.push('יעלה ויבוא');
+    if (specialShabbat)    rows.push(specialShabbat);
+    if (shabbatMevarchim)  rows.push('שבת מברכים');
+    if (specialDay)        rows.push(specialDay);
+    if (roshChodesh)       rows.push('ראש חודש');
+    if (yaalehVeYavo)      rows.push('יעלה ויבוא');
     rows.push(talRow, geshem);
-    if (alHaNisim) rows.push('אל הניסים');
+    if (alHaNisim)         rows.push('אל הניסים');
     while (rows.length < 7) rows.push('');
     return rows.join('\n');
   }
@@ -138,6 +305,10 @@
     getDisplayText,
     getDayInfo,
     getParshaForDate,
+    getOmerDay,
+    getOmerSection,
+    omerFullText,
+    splitBalancedLines,
     isTalUMatar,
     isMoridHaGeshem,
     stripNiqqud,

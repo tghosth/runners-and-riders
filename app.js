@@ -22,8 +22,59 @@
   // second instead of every minute).
   const SHOW_SECONDS = new URLSearchParams(location.search).has('seconds');
 
-  const { HDate } = window.hebcal;
-  const { getDisplayText } = window.Liturgy;
+  const { HDate, GeoLocation, Zmanim } = window.hebcal;
+  const { getDisplayText, getOmerSection, splitBalancedLines } = window.Liturgy;
+
+  // ─── Tzeit hakochavim ────────────────────────────────────────
+  // The Hebrew date rolls over at tzeit hakochavim — when the sun's
+  // centre dips `ROLLOVER_DEPRESSION_DEG` below the horizon (8.5° is
+  // the Geonim / "three medium stars visible" convention). We use
+  // Hebcal's NOAA-based Zmanim class, which exposes the full set of
+  // halachic times (alot, sunrise, chatzot, plag, sunset, tzeit72, …)
+  // from the same GeoLocation — useful when we want more zmanim later.
+  // The bundle uses Temporal.PlainDate internally, so the Temporal
+  // polyfill must load first (see vendor/temporal-polyfill.min.js).
+  //
+  // Hardcoded for now: Modi'in-Maccabim-Re'ut, Israel. Swap these
+  // constants (or wire them to a picker / geolocation) to relocate.
+  const ROLLOVER_LAT  = 31.8924;   // °N
+  const ROLLOVER_LON  = 35.0103;   // °E
+  const ROLLOVER_ELEV = 290;       // m above sea level
+  const ROLLOVER_TZ   = 'Asia/Jerusalem';
+  const ROLLOVER_DEPRESSION_DEG = 8.5;
+  const ROLLOVER_LOC = new GeoLocation(
+    'Rollover Location',
+    ROLLOVER_LAT,
+    ROLLOVER_LON,
+    ROLLOVER_ELEV,
+    ROLLOVER_TZ,
+  );
+
+  function tzeitForLocalDate(year, month, day) {
+    // Zmanim takes a JS Date pinned to the local civil date — only
+    // the y/m/d components are read, time-of-day is ignored.
+    const z = new Zmanim(ROLLOVER_LOC, new Date(year, month - 1, day), false);
+    return z.tzeit(ROLLOVER_DEPRESSION_DEG);
+  }
+
+  // Returns a JS Date set to midnight (browser-local) representing the
+  // *effective* Hebrew calendar day for `realNow`: today's local civil
+  // date at the rollover location if before tzeit, the next civil date
+  // once tzeit has passed. The HDate constructor uses the day component
+  // of the date, so the wall-clock crossover propagates cleanly.
+  function getEffectiveTodayJs(realNow) {
+    const isoStr = realNow.toLocaleDateString('en-CA', { timeZone: ROLLOVER_TZ });
+    const [y, m, d] = isoStr.split('-').map(Number);
+    const tz = tzeitForLocalDate(y, m, d);
+    if (tz && realNow.getTime() >= tz.getTime()) {
+      return new Date(y, m - 1, d + 1);
+    }
+    return new Date(y, m - 1, d);
+  }
+
+  // True until the user manually picks a date — controls whether the
+  // displayed date auto-advances at tzeit each evening.
+  let liveDateMode = true;
 
   const board = document.getElementById('board');
 
@@ -34,6 +85,15 @@
   // sits at the RTL start = visual right.
   const TIME_COLS = SHOW_SECONDS ? 8 : 5;
   const DATE_COLS = 14;
+
+  // Footer (sefira count) layout. Lines are padded to FOOTER_COLS so
+  // cells stay uniformly sized across rows. 20 cells × 3 lines is the
+  // smallest grid that holds every omer day's text (worst case is
+  // day 29 — its balanced 3-line split has a longest line of 20).
+  // Fewer columns gives bigger cells; FOOTER_MAX_LINES is the user-
+  // facing knob — bumping it up lets FOOTER_COLS shrink in tandem.
+  const FOOTER_COLS = 20;
+  const FOOTER_MAX_LINES = 3;
 
   // Time formatter: 24-hour Asia/Jerusalem, en-GB gives "HH:MM" (or
   // "HH:MM:SS" with ?seconds) with leading zeros regardless of locale.
@@ -170,6 +230,55 @@
     headerEl.appendChild(timeSection);
 
     return { headerEl, allCells };
+  }
+
+  // Builds the brass-plate footer used for the Sefirat HaOmer count —
+  // mirrors the header structurally (smaller cells than the body, set
+  // off from the message rows by extra top margin) but stacks two
+  // flex rows of FOOTER_COLS cells each so a balanced split of the
+  // full Ashkenazi text fits with cell sizes that stay constant
+  // across both lines. Returns null on non-omer dates. The cells are
+  // returned as one flat array (in DOM/cascade order) and as a
+  // per-line list so renderMessage can stagger each footer row.
+  function buildFooterRows(forDate) {
+    const sec = getOmerSection ? getOmerSection(forDate) : null;
+    if (!sec) return null;
+    const lines = splitBalancedLines(sec.fullText, FOOTER_MAX_LINES, FOOTER_COLS);
+
+    const footerEl = document.createElement('div');
+    footerEl.className = 'board-footer';
+
+    const lineCells = [];
+
+    for (const lineText of lines) {
+      const lineEl = document.createElement('div');
+      lineEl.className = 'footer-line';
+      const chars = Array.from(lineText);
+      const padCount = Math.max(0, FOOTER_COLS - chars.length);
+      const cellsForLine = [];
+
+      for (const ch of chars) {
+        const cell = createCell();
+        setCellChar(cell, ' ');
+        cell._target = ch;
+        cell._charSet = HEBREW_CHAR_SET;
+        lineEl.appendChild(cell.el);
+        cellsForLine.push(cell);
+      }
+      for (let i = 0; i < padCount; i += 1) {
+        const cell = createCell();
+        setCellChar(cell, ' ');
+        cell._target = ' ';
+        cell._charSet = HEBREW_CHAR_SET;
+        lineEl.appendChild(cell.el);
+        cellsForLine.push(cell);
+      }
+
+      lineCells.push(cellsForLine);
+      footerEl.appendChild(lineEl);
+    }
+
+    return { footerEl, lineCells };
   }
 
   function updateClock() {
@@ -343,6 +452,12 @@
 
       cells.push(rowCells);
       board.appendChild(rowEl);
+    }
+
+    const footer = buildFooterRows(forDate);
+    if (footer) {
+      board.appendChild(footer.footerEl);
+      for (const lc of footer.lineCells) cells.push(lc);
     }
 
     return cells;
@@ -535,7 +650,21 @@
     renderMessage(getDisplayText(jsDate), jsDate);
   }
 
+  // While liveDateMode is on, this watches for the tzeit-hakochavim
+  // crossover and re-renders against the new effective Hebrew date.
+  // Called from each clock tick and from any wall-clock change (time
+  // override, "now" button) so the rollover doesn't lag a tick.
+  function maybeAdvanceLiveDate() {
+    if (!liveDateMode) return;
+    const eff = getEffectiveTodayJs(getDisplayedTime());
+    if (eff.getTime() === selectedDate.getTime()) return;
+    syncGregSelectors(eff);
+    syncGregToHebrew(eff);
+    renderForDate(eff);
+  }
+
   function setDateFromGreg(jsDate) {
+    liveDateMode = false;
     syncGregToHebrew(jsDate);
     renderForDate(jsDate);
   }
@@ -543,6 +672,7 @@
   function setDateFromGregSelectors() {
     const jsDate = gregSelectorsToJs();
     if (!jsDate) return;
+    liveDateMode = false;
     syncGregToHebrew(jsDate);
     renderForDate(jsDate);
   }
@@ -550,6 +680,7 @@
   function setDateFromHebrewSelectors() {
     const jsDate = hebrewSelectorsToGreg();
     if (!jsDate) return;
+    liveDateMode = false;
     syncGregSelectors(jsDate);
     renderForDate(jsDate);
   }
@@ -783,6 +914,7 @@
     timeOverride = null;
     if (timeInput) timeInput.value = fmtTimeForInput(new Date());
     updateClock();
+    maybeAdvanceLiveDate();
   }
 
   if (timeInput) {
@@ -795,6 +927,7 @@
       const anchor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, ss || 0, 0);
       timeOverride = { anchorClock: anchor.getTime(), anchorReal: now.getTime() };
       updateClock();
+      maybeAdvanceLiveDate();
     });
   }
   if (timeNowBtn) timeNowBtn.addEventListener('click', clearTimeOverride);
@@ -814,10 +947,9 @@
     }
   }
 
-  // Default to today in Jerusalem time and initialise both pickers
-  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const [ty, tm, td] = todayStr.split('-').map(Number);
-  const todayJs = new Date(ty, tm - 1, td);
+  // Default to today in Jerusalem time, shifted to next Greg day after
+  // Modi'in tzeit (so the Hebrew date rolls over at nightfall, not midnight).
+  const todayJs = getEffectiveTodayJs(getDisplayedTime());
   syncGregSelectors(todayJs);
   syncGregToHebrew(todayJs);
   renderForDate(todayJs);
@@ -830,6 +962,7 @@
     const msToNext = period - (Date.now() % period);
     setTimeout(() => {
       updateClock();
+      maybeAdvanceLiveDate();
       scheduleNextClockTick();
     }, msToNext);
   }
