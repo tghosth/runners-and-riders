@@ -67,19 +67,53 @@ const OMER_CASES = [
   [49, 'היום תשעה וארבעים יום שהם שבעה שבועות לעומר'],
 ];
 
-console.log('\n── Sefirat HaOmer (full text round-trip)');
+console.log('\n── Sefirat HaOmer (full text)');
 for (const [n, expected] of OMER_CASES) {
-  // Wide max so wrapping joins back into a single canonical line.
-  const lines = Liturgy.omerLines(n, 100);
-  eq(`day ${n}`, lines.join(' '), expected);
+  eq(`day ${n}`, Liturgy.omerFullText(n), expected);
 }
 
-console.log('\n── Sefirat HaOmer (each wrapped line ≤ 13 chars)');
+// The footer caps the omer at FOOTER_MAX_LINES rows of FOOTER_COLS
+// cells each. The values must let every omer day's balanced split
+// fit; with 3 lines the worst day (#29) needs 20 columns — bumping
+// FOOTER_COLS down or FOOTER_MAX_LINES down without re-validating
+// would silently overflow. This test pins the budget.
+const FOOTER_COLS = 20;
+const FOOTER_MAX_LINES = 3;
+console.log(`\n── Sefirat HaOmer (balanced split fits ≤ ${FOOTER_MAX_LINES} lines × ${FOOTER_COLS} chars)`);
 for (let n = 1; n <= 49; n++) {
-  const lines = Liturgy.omerLines(n, 13);
-  const overflow = lines.find(l => Array.from(l).length > 13);
-  check(`day ${n}: all lines ≤ 13`, !overflow,
-    overflow ? `line overflows: ${JSON.stringify(overflow)} (${Array.from(overflow).length} chars)` : null);
+  const lines = Liturgy.splitBalancedLines(Liturgy.omerFullText(n), FOOTER_MAX_LINES, FOOTER_COLS);
+  const overflow = lines.find(l => Array.from(l).length > FOOTER_COLS);
+  check(`day ${n}: ≤${FOOTER_MAX_LINES} lines, each ≤${FOOTER_COLS} chars`,
+    lines.length <= FOOTER_MAX_LINES && !overflow,
+    overflow ? `line overflows ${FOOTER_COLS}: ${JSON.stringify(overflow)} (${Array.from(overflow).length} chars)`
+             : `${lines.length} lines, expected ≤${FOOTER_MAX_LINES}`);
+}
+
+console.log('\n── Sefirat HaOmer (split round-trip — joined lines === full text)');
+for (let n = 1; n <= 49; n++) {
+  const full = Liturgy.omerFullText(n);
+  const joined = Liturgy.splitBalancedLines(full, FOOTER_MAX_LINES, FOOTER_COLS).join(' ');
+  eq(`day ${n}`, joined, full);
+}
+
+console.log('\n── Sefirat HaOmer (split prefers fewer lines when the text fits)');
+{
+  // Day 1 — short enough to fit on one line at FOOTER_COLS=20
+  const lines1 = Liturgy.splitBalancedLines(Liturgy.omerFullText(1), 3, 20);
+  eq('day 1: 1 line', lines1.length, 1);
+  eq('day 1: joined', lines1.join(' '), 'היום יום אחד לעומר');
+}
+
+console.log('\n── Sefirat HaOmer (getOmerSection)');
+{
+  const offDay = Liturgy.getOmerSection(new Date(2026, 0, 6));
+  check('non-omer date returns null', offDay === null,
+    offDay ? `got ${JSON.stringify(offDay)}` : null);
+  const day1 = Liturgy.getOmerSection(new Date(2026, 3, 3));
+  eq('16 Nisan: day=1',     day1 && day1.day,      1);
+  eq('16 Nisan: fullText',  day1 && day1.fullText, 'היום יום אחד לעומר');
+  const day32 = Liturgy.getOmerSection(new Date(2026, 4, 4)); // 16 Iyar 5786
+  eq('16 Iyar: day=32',     day32 && day32.day,    32);
 }
 
 // ── Liturgical decisions for known dates ──

@@ -23,7 +23,7 @@
   const SHOW_SECONDS = new URLSearchParams(location.search).has('seconds');
 
   const { HDate, GeoLocation, Zmanim } = window.hebcal;
-  const { getDisplayText } = window.Liturgy;
+  const { getDisplayText, getOmerSection, splitBalancedLines } = window.Liturgy;
 
   // ─── Tzeit hakochavim ────────────────────────────────────────
   // The Hebrew date rolls over at tzeit hakochavim — when the sun's
@@ -85,6 +85,15 @@
   // sits at the RTL start = visual right.
   const TIME_COLS = SHOW_SECONDS ? 8 : 5;
   const DATE_COLS = 14;
+
+  // Footer (sefira count) layout. Lines are padded to FOOTER_COLS so
+  // cells stay uniformly sized across rows. 20 cells × 3 lines is the
+  // smallest grid that holds every omer day's text (worst case is
+  // day 29 — its balanced 3-line split has a longest line of 20).
+  // Fewer columns gives bigger cells; FOOTER_MAX_LINES is the user-
+  // facing knob — bumping it up lets FOOTER_COLS shrink in tandem.
+  const FOOTER_COLS = 20;
+  const FOOTER_MAX_LINES = 3;
 
   // Time formatter: 24-hour Asia/Jerusalem, en-GB gives "HH:MM" (or
   // "HH:MM:SS" with ?seconds) with leading zeros regardless of locale.
@@ -221,6 +230,54 @@
     headerEl.appendChild(timeSection);
 
     return { headerEl, allCells };
+  }
+
+  // Builds the brass-plate footer used for the Sefirat HaOmer count —
+  // mirrors the header structurally (smaller cells than the body, set
+  // off from the message rows by extra top margin) but stacks two
+  // flex rows of FOOTER_COLS cells each so a balanced split of the
+  // full Ashkenazi text fits with cell sizes that stay constant
+  // across both lines. Returns null on non-omer dates. The cells are
+  // returned as one flat array (in DOM/cascade order) and as a
+  // per-line list so renderMessage can stagger each footer row.
+  function buildFooterRows(forDate) {
+    const sec = getOmerSection ? getOmerSection(forDate) : null;
+    if (!sec) return null;
+
+    const footerEl = document.createElement('div');
+    footerEl.className = 'board-footer';
+
+    const lineCells = [];
+
+    for (const lineText of sec.lines) {
+      const lineEl = document.createElement('div');
+      lineEl.className = 'footer-line';
+      const chars = Array.from(lineText);
+      const padCount = Math.max(0, FOOTER_COLS - chars.length);
+      const cellsForLine = [];
+
+      for (const ch of chars) {
+        const cell = createCell();
+        setCellChar(cell, ' ');
+        cell._target = ch;
+        cell._charSet = HEBREW_CHAR_SET;
+        lineEl.appendChild(cell.el);
+        cellsForLine.push(cell);
+      }
+      for (let i = 0; i < padCount; i += 1) {
+        const cell = createCell();
+        setCellChar(cell, ' ');
+        cell._target = ' ';
+        cell._charSet = HEBREW_CHAR_SET;
+        lineEl.appendChild(cell.el);
+        cellsForLine.push(cell);
+      }
+
+      lineCells.push(cellsForLine);
+      footerEl.appendChild(lineEl);
+    }
+
+    return { footerEl, lineCells };
   }
 
   function updateClock() {
@@ -394,6 +451,12 @@
 
       cells.push(rowCells);
       board.appendChild(rowEl);
+    }
+
+    const footer = buildFooterRows(forDate);
+    if (footer) {
+      board.appendChild(footer.footerEl);
+      for (const lc of footer.lineCells) cells.push(lc);
     }
 
     return cells;

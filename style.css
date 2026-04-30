@@ -106,6 +106,28 @@ main {
   min-width: 0;
 }
 
+/* Footer for the Sefirat HaOmer count — mirrors the header's "smaller
+   subordinate row" treatment but stacks two flex rows below the
+   message body. Both lines are padded in JS to the same FOOTER_COLS
+   so the cells are uniformly sized; flex: 1 1 0 on each cell shares
+   the row width equally. With ~30 cells per line, each is roughly
+   half the width of a body cell. */
+.board-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+  margin-top: calc(var(--cell-gap) * 3);
+  padding: 0 0.15rem;
+  min-width: 0;
+}
+
+.board-footer .footer-line {
+  display: flex;
+  gap: var(--cell-gap);
+  width: 100%;
+  /* dir="rtl" is inherited from .board */
+}
+
 .board {
   display: flex;
   flex-direction: column;
@@ -175,11 +197,16 @@ main {
 .cell .half.top {
   top: 0;
   border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
   background-image:
     linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
     var(--stone-texture);
   align-items: flex-end;
+  /* No seam in the static state — the line was reading as cutting
+     through the letter even with the .letter overlay z-indexed above
+     it (anti-aliased glyph edges let a 0.05–0.15 alpha line bleed
+     through the centre of the character). The .flap element keeps
+     its own border-bottom so the seam still reads during the flip
+     animation. */
 }
 
 .cell .half.top span {
@@ -198,7 +225,7 @@ main {
     0 0,
     calc(var(--bg-x, 0%) + 37%) calc(var(--bg-y, 0%) + 53%);
   align-items: flex-start;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.10);
+  /* No inset shadow on the top edge — see the comment on .half.top. */
 }
 
 .cell .half.bottom span {
@@ -249,7 +276,12 @@ main {
 /* Whole-letter overlay drawn above the seam between the two halves, so
    the static letter reads as a single character rather than two clipped
    halves with a visible groove through the middle. Hidden during a flip
-   so the split-flap animation still reads. */
+   (opacity: 0 below) so the standard split-flap animation still reads.
+   Critically, this sits *above* the .flap (z-index 2) — the flap covers
+   the top half at rest and carries its own border-bottom at y=50%, so
+   without raising .letter above it the seam line painted in front of
+   the glyph. During a flip the letter is invisible, so its higher
+   z-index doesn't interfere with the fold. */
 .cell .letter {
   position: absolute;
   inset: 0;
@@ -262,8 +294,7 @@ main {
   color: var(--ink);
   pointer-events: none;
   user-select: none;
-  /* Above halves (default z-index 0) but below the flap (z-index 2). */
-  z-index: 1;
+  z-index: 3;
   text-shadow:
     0 -1px 1px rgba(0, 0, 0, 0.75),
     0  1px 1px rgba(255, 250, 235, 0.90),

@@ -202,50 +202,74 @@
     return 'שהם ' + weekP + ' ו' + NUM_CONSTRUCT[days] + ' ימים';
   }
 
-  // Greedy word-wrap for Hebrew text into ≤max-char lines.
-  function wrapWords(text, max) {
-    const words = text.split(/\s+/).filter(Boolean);
-    const lines = [];
-    let cur = '';
-    for (const w of words) {
-      const next = cur ? cur + ' ' + w : w;
-      if (Array.from(next).length <= max) {
-        cur = next;
-      } else {
-        if (cur) lines.push(cur);
-        cur = w;
-      }
-    }
-    if (cur) lines.push(cur);
-    return lines;
-  }
-
-  // Returns the Ashkenazi "היום … לעומר" text broken into ≤MAX lines.
-  // We break at structural boundaries (היום / day-phrase / week-phrase /
-  // remainder / לעומר) rather than purely greedy — produces lines that
-  // each read as a coherent noun phrase.
-  function omerLines(n, max) {
-    const lines = [];
-    const dayP = omerDayPhrase(n);
-    const opener = 'היום ' + dayP;
-    if (Array.from(opener).length <= max) {
-      lines.push(opener);
-    } else {
-      lines.push('היום');
-      for (const l of wrapWords(dayP, max)) lines.push(l);
-    }
+  // Returns the full Ashkenazi single-line text for omer day n, e.g.
+  //   "היום שלשה ושלשים יום שהם ארבעה שבועות וחמשה ימים לעומר"
+  function omerFullText(n) {
+    let txt = 'היום ' + omerDayPhrase(n);
     if (n >= 7) {
       const weeks = Math.floor(n / 7);
       const rem = n % 7;
-      for (const l of wrapWords(omerWeekPhrase(weeks, rem), max)) lines.push(l);
+      txt += ' ' + omerWeekPhrase(weeks, rem);
     }
-    const last = lines[lines.length - 1];
-    if (Array.from(last + ' לעומר').length <= max) {
-      lines[lines.length - 1] = last + ' לעומר';
-    } else {
-      lines.push('לעומר');
+    return txt + ' לעומר';
+  }
+
+  // Word-balanced split into exactly k lines — picks the word
+  // boundaries that minimise the longest line. Recursive DP, fine for
+  // sefira-sized text (≤ ~10 words). Returns { lines, maxLen } or
+  // null if k > word count.
+  function balancedSplitInto(words, k) {
+    if (k > words.length) return null;
+    function rec(start, linesLeft) {
+      if (linesLeft === 1) {
+        const rest = words.slice(start).join(' ');
+        return { lines: [rest], maxLen: Array.from(rest).length };
+      }
+      let best = null;
+      for (let i = start + 1; i <= words.length - linesLeft + 1; i++) {
+        const head = words.slice(start, i).join(' ');
+        const sub = rec(i, linesLeft - 1);
+        if (!sub) continue;
+        const maxLen = Math.max(Array.from(head).length, sub.maxLen);
+        if (!best || maxLen < best.maxLen) {
+          best = { lines: [head, ...sub.lines], maxLen };
+        }
+      }
+      return best;
     }
-    return lines;
+    return rec(0, k);
+  }
+
+  // Splits Hebrew text into the smallest number of lines (1..maxLines)
+  // whose longest line fits maxLineLen characters. If even the
+  // maxLines split overflows, falls back to that split anyway — the
+  // layout still renders, just with a clipped row. Used by the sefira
+  // footer; the parameters live in app.js so layout concerns stay out
+  // of the liturgy module.
+  function splitBalancedLines(text, maxLines, maxLineLen) {
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [];
+    if (words.length === 1) return [text];
+    let fallback = null;
+    for (let k = 1; k <= maxLines; k++) {
+      const r = balancedSplitInto(words, k);
+      if (!r) break;
+      if (r.maxLen <= maxLineLen) return r.lines;
+      fallback = r;
+    }
+    return fallback ? fallback.lines : [text];
+  }
+
+  // The sefira section rendered separately at the bottom of the board
+  // on smaller flap cells (see .board-footer in style.css). Returns
+  // the day number + the unwrapped Ashkenazi text; app.js does the
+  // line-wrapping itself with FOOTER_COLS / FOOTER_MAX_LINES so layout
+  // tuning doesn't have to round-trip through this file.
+  function getOmerSection(jsDate) {
+    const hd = new HDate(jsDate);
+    const n = getOmerDay(hd);
+    if (n === 0) return null;
+    return { day: n, fullText: omerFullText(n) };
   }
 
   // Build the body text for a given JS date — always at least 7 rows so
@@ -274,12 +298,6 @@
     rows.push(talRow, geshem);
     if (alHaNisim)         rows.push('אל הניסים');
     while (rows.length < 7) rows.push('');
-
-    const omerN = getOmerDay(hd);
-    if (omerN > 0) {
-      rows.push('');
-      for (const l of omerLines(omerN, 13)) rows.push(l);
-    }
     return rows.join('\n');
   }
 
@@ -288,7 +306,9 @@
     getDayInfo,
     getParshaForDate,
     getOmerDay,
-    omerLines,
+    getOmerSection,
+    omerFullText,
+    splitBalancedLines,
     isTalUMatar,
     isMoridHaGeshem,
     stripNiqqud,
