@@ -63,7 +63,7 @@
     if (cholHamoed) {
       const en = renderEn(cholHamoed);
       const name = /pesach|passover/i.test(en) ? 'חול המועד פסח'
-                 : /sukkot/i.test(en)          ? 'חול המועד סוכות'
+                 : /sukkot/i.test(en)          ? 'ח המועד סוכות'
                  : renderHe(cholHamoed);
       return { holidayName: name, yaalehVeYavo: true };
     }

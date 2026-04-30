@@ -16,7 +16,7 @@ the weekly Torah portion for that Shabbat.
 
 1. Call `HebrewCalendar.calendar({ start, end, il: true })` for the date.
 2. If any event has the `CHOL_HAMOED` flag → show a fixed Hebrew string:
-   - `חול המועד פסח` or `חול המועד סוכות`
+   - `חול המועד פסח` (13 chars) or `ח המועד סוכות` (13 chars)
 3. Else if any event has the `CHAG` flag (major Yom Tov) → show
    `e.render('he')` with niqqud stripped.
 4. If neither → fall through to the parsha logic below.
