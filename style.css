@@ -87,21 +87,27 @@ main {
 
 /* Bottom row reads as one continuous strip of HEADER_COLS flaps —
    sections are siblings with the same cell-gap as cells inside each
-   section, so the dow + spacer + time tiles look uniform. */
+   section, so the dow + spacer + time tiles look uniform across the
+   row. Width: 100% combined with `flex: <cells> 1 0` on each child
+   section makes them share the row width in proportion to their cell
+   count. */
 .board-header .header-bottom-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: var(--cell-gap);
+  width: 100%;
   min-width: 0;
 }
 
 .board-header .header-section {
   display: flex;
   gap: var(--cell-gap);
-  /* Shrink uniformly when the combined width exceeds the frame so the
-     date + time always fit on one line, even on phones. */
   min-width: 0;
-  flex: 0 1 auto;
+  /* Default: section flex-fills its parent. The bottom row has three
+     sections (dow / spacer / time) sharing the row width — JS sets
+     each one's inline `flex-grow` to its cell count, so the row
+     reads as 16 uniformly-sized tiles total just like the top row. */
+  flex: 1 1 0;
 }
 
 /* Time digits read left-to-right even though the rest of the frame is
@@ -110,13 +116,13 @@ main {
   direction: ltr;
 }
 
-/* Header cells: ~half of body-cell width on wide screens, but allowed
-   to shrink (flex-shrink: 1) when the row would otherwise overflow.
-   cqw resolves against the .display-frame container declared above. */
+/* Header cells flex-fill the row (drop the old fixed-width override),
+   so 16 tiles span the frame width with the same gaps as a body row.
+   Cells in a body row are slightly larger because there are only 13
+   of them — that subordination is exactly the visual hierarchy we
+   want, no extra rules needed. */
 .board-header .cell {
-  flex: 0 1 auto;
-  width: min(56px, 5cqw);
-  min-width: 0;
+  /* falls through to `.cell { flex: 1 1 0; … }` */
 }
 
 /* Footer for the Sefirat HaOmer count — mirrors the header's "smaller

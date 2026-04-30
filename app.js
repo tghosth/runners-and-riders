@@ -261,9 +261,13 @@
     bottomRow.className = 'header-bottom-row';
 
     // dowSection: DOW_COLS cells. Chars first (visual right), blank
-    // padding cells after for shorter weekday labels.
+    // padding cells after for shorter weekday labels. Section's
+    // flex-grow is set to its cell count so the three siblings
+    // (dow / spacer / time) share the row width proportionally —
+    // every cell ends up the same width as a flat 16-cell row.
     const dowSection = document.createElement('div');
     dowSection.className = 'header-section header-dow';
+    dowSection.style.flex = `${DOW_COLS} 1 0`;
     headerDowCells = [];
     for (const ch of dowChars) {
       appendCell(dowSection, ch, HEBREW_CHAR_SET, [headerDowCells, allCells]);
@@ -278,6 +282,7 @@
     // flaps with the central few left empty.
     const spacerSection = document.createElement('div');
     spacerSection.className = 'header-section header-spacer';
+    spacerSection.style.flex = `${HEADER_GAP_COLS} 1 0`;
     for (let i = 0; i < HEADER_GAP_COLS; i += 1) {
       appendCell(spacerSection, ' ', HEBREW_CHAR_SET, [allCells]);
     }
@@ -286,6 +291,7 @@
     const timeSection = document.createElement('div');
     timeSection.className = 'header-section header-time';
     timeSection.setAttribute('dir', 'ltr');
+    timeSection.style.flex = `${TIME_COLS} 1 0`;
     headerTimeCells = [];
     for (const ch of timeChars) {
       const cell = appendCell(timeSection, ch, TIME_CHAR_SET, [headerTimeCells, allCells]);
