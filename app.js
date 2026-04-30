@@ -243,13 +243,14 @@
   function buildFooterRows(forDate) {
     const sec = getOmerSection ? getOmerSection(forDate) : null;
     if (!sec) return null;
+    const lines = splitBalancedLines(sec.fullText, FOOTER_MAX_LINES, FOOTER_COLS);
 
     const footerEl = document.createElement('div');
     footerEl.className = 'board-footer';
 
     const lineCells = [];
 
-    for (const lineText of sec.lines) {
+    for (const lineText of lines) {
       const lineEl = document.createElement('div');
       lineEl.className = 'footer-line';
       const chars = Array.from(lineText);
