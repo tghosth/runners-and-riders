@@ -18,8 +18,14 @@
 
     <section class="controls">
       <div class="control-row">
-        <label for="date-pick">תאריך לועזי</label>
-        <input type="date" id="date-pick" dir="ltr">
+        <label>תאריך לועזי</label>
+        <select id="greg-day" dir="ltr"></select>
+        <select id="greg-month" dir="rtl"></select>
+        <select id="greg-year" dir="ltr"></select>
+        <div class="hcal-wrap">
+          <button type="button" id="gcal-toggle" aria-label="פתח לוח חודשי">📅</button>
+          <div id="gcal-popup" class="hcal-popup" hidden></div>
+        </div>
       </div>
       <div class="control-row">
         <label>תאריך עברי</label>
@@ -30,6 +36,11 @@
           <button type="button" id="hcal-toggle" aria-label="פתח לוח חודשי">📅</button>
           <div id="hcal-popup" class="hcal-popup" hidden></div>
         </div>
+      </div>
+      <div class="control-row">
+        <label for="time-pick">שעה</label>
+        <input type="time" id="time-pick" dir="ltr" step="1">
+        <button type="button" id="time-now">חזרה לזמן הנוכחי</button>
       </div>
     </section>
   </main>

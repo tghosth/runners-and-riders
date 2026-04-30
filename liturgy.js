@@ -13,7 +13,7 @@
   // Hebcal renders combined parshiot with a Hebrew maqaf (U+05BE) and the
   // short "קדשים" spelling, so the override key matches that exactly.
   const PARSHA_OVERRIDES = {
-    'אחרי מות־קדשים': 'אחרי מ־קדשים',
+    'אחרי מות־קדשים': 'אחרי מ־קדושים',
   };
 
   // Strip Hebrew niqqud + cantillation (U+0591–U+05C7) but preserve the

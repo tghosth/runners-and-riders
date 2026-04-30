@@ -18,6 +18,10 @@
   // final character immediately. Useful for testing liturgical logic.
   const INSTANT = new URLSearchParams(location.search).has('instant');
 
+  // ?seconds in the URL adds an HH:MM:SS time display (and ticks every
+  // second instead of every minute).
+  const SHOW_SECONDS = new URLSearchParams(location.search).has('seconds');
+
   const { HDate } = window.hebcal;
   const { getDisplayText } = window.Liturgy;
 
@@ -28,17 +32,28 @@
   // date go on the visual right, and any leftover cells become padding
   // in the middle. With dir="rtl" on the board the DOM-first child
   // sits at the RTL start = visual right.
-  const TIME_COLS = 5;
+  const TIME_COLS = SHOW_SECONDS ? 8 : 5;
   const DATE_COLS = 14;
 
-  // Time formatter: 24-hour Asia/Jerusalem, en-GB gives "HH:MM" with
-  // leading zeros regardless of the user's locale.
+  // Time formatter: 24-hour Asia/Jerusalem, en-GB gives "HH:MM" (or
+  // "HH:MM:SS" with ?seconds) with leading zeros regardless of locale.
   const TIME_FMT = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Jerusalem',
     hour: '2-digit',
     minute: '2-digit',
+    ...(SHOW_SECONDS ? { second: '2-digit' } : {}),
     hour12: false,
   });
+
+  // Time override — when the user picks a time, we store an anchor
+  // (the chosen instant + the real-time instant when they picked it)
+  // and the displayed clock = anchor + (now - anchorReal). Setting
+  // null returns to the real wall clock.
+  let timeOverride = null;
+  function getDisplayedTime() {
+    if (timeOverride === null) return new Date();
+    return new Date(timeOverride.anchorClock + (Date.now() - timeOverride.anchorReal));
+  }
 
   // Hebrew month-name formatter (long form). We use Intl for the month
   // string but compute the day in gematria ourselves below — `nu-hebr`
@@ -117,7 +132,7 @@
   // order so the cascade can stagger them like any body row.
   function buildHeaderRow(forDate) {
     const dateChars = Array.from(formatHebrewDate(forDate));
-    const timeChars = Array.from(TIME_FMT.format(new Date()));
+    const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
 
     const headerEl = document.createElement('div');
     headerEl.className = 'board-header';
@@ -159,7 +174,7 @@
 
   function updateClock() {
     if (!headerTimeCells.length && !headerDateCells.length) return;
-    const timeChars = Array.from(TIME_FMT.format(new Date()));
+    const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
     const dateChars = Array.from(formatHebrewDate(selectedDate));
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;
@@ -202,11 +217,19 @@
     const flapSpan = document.createElement('span');
     flap.appendChild(flapSpan);
 
+    // Whole-letter overlay so the seam between top + bottom halves
+    // doesn't visually bisect the character in the static state. The
+    // overlay is hidden during a flip (.flipping class) so the standard
+    // split-flap animation still reads.
+    const letter = document.createElement('span');
+    letter.className = 'letter';
+
     el.appendChild(top);
     el.appendChild(bottom);
     el.appendChild(flap);
+    el.appendChild(letter);
 
-    return { el, topSpan, bottomSpan, flap, flapSpan, current: ' ', timer: null, flipTimer: null, _abortCycles: false };
+    return { el, topSpan, bottomSpan, flap, flapSpan, letter, current: ' ', timer: null, flipTimer: null, _abortCycles: false };
   }
 
   function setCellChar(cell, char) {
@@ -214,6 +237,7 @@
     cell.topSpan.textContent = char;
     cell.bottomSpan.textContent = char;
     cell.flapSpan.textContent = char;
+    cell.letter.textContent = char;
   }
 
   const FLIP_DURATION_MS = 80;
@@ -426,11 +450,85 @@
     try { return new HDate(day, month, year).greg(); } catch { return null; }
   }
 
+  // ─── Gregorian date selector helpers ───────────────────────────
+  // Mirrors the Hebrew picker so both calendars present an identical
+  // UI: three selects (day / month / year) + a 📅 button that opens a
+  // styled month-grid popup. Months are labelled in Hebrew so the row
+  // reads naturally next to "תאריך לועזי".
+  const GREG_MONTH_NAMES = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                            'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+  function gregDaysInMonth(month, year) {
+    return new Date(year, month, 0).getDate();
+  }
+
+  function populateGregYear(sel, targetYear) {
+    const current = parseInt(sel.value, 10) || targetYear;
+    const start = targetYear - 5;
+    const end   = targetYear + 10;
+    sel.innerHTML = '';
+    for (let y = start; y <= end; y++) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      if (y === current) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    if (!sel.value) sel.value = targetYear;
+  }
+
+  function populateGregMonths(sel, targetMonth) {
+    const prev = parseInt(sel.value, 10) || targetMonth;
+    sel.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = GREG_MONTH_NAMES[m];
+      if (m === prev) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  function populateGregDays(sel, month, year, targetDay) {
+    const prev = parseInt(sel.value, 10) || targetDay;
+    const maxDay = gregDaysInMonth(month, year);
+    sel.innerHTML = '';
+    for (let d = 1; d <= maxDay; d++) {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      if (d === Math.min(prev, maxDay)) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  function syncGregSelectors(jsDate) {
+    const y = jsDate.getFullYear();
+    const m = jsDate.getMonth() + 1;
+    const d = jsDate.getDate();
+    populateGregYear(gregYearSel, y);
+    gregYearSel.value = y;
+    populateGregMonths(gregMonthSel, m);
+    gregMonthSel.value = m;
+    populateGregDays(gregDaySel, m, y, d);
+    gregDaySel.value = d;
+  }
+
+  function gregSelectorsToJs() {
+    const y = parseInt(gregYearSel.value, 10);
+    const m = parseInt(gregMonthSel.value, 10);
+    const d = parseInt(gregDaySel.value, 10);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
   // ─── Date pickers ───────────────────────────────────────────────
-  const dateInput  = document.getElementById('date-pick');
-  const hebYearSel  = document.getElementById('heb-year');
-  const hebMonthSel = document.getElementById('heb-month');
-  const hebDaySel   = document.getElementById('heb-day');
+  const gregYearSel  = document.getElementById('greg-year');
+  const gregMonthSel = document.getElementById('greg-month');
+  const gregDaySel   = document.getElementById('greg-day');
+  const hebYearSel   = document.getElementById('heb-year');
+  const hebMonthSel  = document.getElementById('heb-month');
+  const hebDaySel    = document.getElementById('heb-day');
 
   function renderForDate(jsDate) {
     selectedDate = jsDate;
@@ -442,17 +540,35 @@
     renderForDate(jsDate);
   }
 
-  function setDateFromHebrewSelectors() {
-    const jsDate = hebrewSelectorsToGreg();
+  function setDateFromGregSelectors() {
+    const jsDate = gregSelectorsToJs();
     if (!jsDate) return;
-    dateInput.value = jsDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    syncGregToHebrew(jsDate);
     renderForDate(jsDate);
   }
 
-  dateInput.addEventListener('change', () => {
-    const [y, m, d] = dateInput.value.split('-').map(Number);
-    setDateFromGreg(new Date(y, m - 1, d));
+  function setDateFromHebrewSelectors() {
+    const jsDate = hebrewSelectorsToGreg();
+    if (!jsDate) return;
+    syncGregSelectors(jsDate);
+    renderForDate(jsDate);
+  }
+
+  gregYearSel.addEventListener('change', () => {
+    const y = parseInt(gregYearSel.value, 10);
+    const m = parseInt(gregMonthSel.value, 10);
+    populateGregDays(gregDaySel, m, y, parseInt(gregDaySel.value, 10));
+    setDateFromGregSelectors();
   });
+
+  gregMonthSel.addEventListener('change', () => {
+    const y = parseInt(gregYearSel.value, 10);
+    const m = parseInt(gregMonthSel.value, 10);
+    populateGregDays(gregDaySel, m, y, parseInt(gregDaySel.value, 10));
+    setDateFromGregSelectors();
+  });
+
+  gregDaySel.addEventListener('change', setDateFromGregSelectors);
 
   hebYearSel.addEventListener('change', () => {
     const year  = parseInt(hebYearSel.value, 10);
@@ -567,6 +683,122 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !hcalPopup.hidden) closeHcalPopup(); });
   }
 
+  // ─── Gregorian calendar popup ──────────────────────────────────
+  // Mirror of the Hebrew popup (shares the .hcal-* CSS classes) so the
+  // two date pickers have an identical look + interaction model.
+  const gcalToggle = document.getElementById('gcal-toggle');
+  const gcalPopup  = document.getElementById('gcal-popup');
+
+  let gcalViewYear = 0;
+  let gcalViewMonth = 0;
+
+  function renderGcalPopup() {
+    const year = gcalViewYear;
+    const month = gcalViewMonth;
+    const daysInMonth = gregDaysInMonth(month, year);
+
+    const selY = selectedDate.getFullYear();
+    const selM = selectedDate.getMonth() + 1;
+    const selD = selectedDate.getDate();
+
+    const firstDow = new Date(year, month - 1, 1).getDay();
+
+    const monthLabel = `${GREG_MONTH_NAMES[month]} ${year}`;
+    const dowLetters = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+
+    let html = `
+      <div class="hcal-nav">
+        <button type="button" class="hcal-prev" aria-label="חודש קודם">▶</button>
+        <span class="hcal-label">${monthLabel}</span>
+        <button type="button" class="hcal-next" aria-label="חודש הבא">◀</button>
+      </div>
+      <div class="hcal-grid">
+    `;
+    for (const l of dowLetters) html += `<div class="hcal-dow">${l}</div>`;
+    for (let i = 0; i < firstDow; i++) html += `<div class="hcal-pad"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isSel = (year === selY && month === selM && d === selD);
+      html += `<button type="button" class="hcal-day${isSel ? ' selected' : ''}" data-day="${d}">${d}</button>`;
+    }
+    html += `</div>`;
+    gcalPopup.innerHTML = html;
+
+    gcalPopup.querySelector('.hcal-prev').addEventListener('click', () => {
+      let m = month - 1, y = year;
+      if (m < 1) { y -= 1; m = 12; }
+      gcalViewYear = y; gcalViewMonth = m;
+      renderGcalPopup();
+    });
+    gcalPopup.querySelector('.hcal-next').addEventListener('click', () => {
+      let m = month + 1, y = year;
+      if (m > 12) { y += 1; m = 1; }
+      gcalViewYear = y; gcalViewMonth = m;
+      renderGcalPopup();
+    });
+    for (const btn of gcalPopup.querySelectorAll('.hcal-day')) {
+      btn.addEventListener('click', () => {
+        const d = parseInt(btn.dataset.day, 10);
+        setDateFromGreg(new Date(year, month - 1, d));
+        closeGcalPopup();
+      });
+    }
+  }
+
+  function openGcalPopup() {
+    gcalViewYear = selectedDate.getFullYear();
+    gcalViewMonth = selectedDate.getMonth() + 1;
+    gcalPopup.hidden = false;
+    renderGcalPopup();
+  }
+
+  function closeGcalPopup() {
+    gcalPopup.hidden = true;
+  }
+
+  if (gcalToggle && gcalPopup) {
+    gcalToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      gcalPopup.hidden ? openGcalPopup() : closeGcalPopup();
+    });
+    gcalPopup.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => { if (!gcalPopup.hidden) closeGcalPopup(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !gcalPopup.hidden) closeGcalPopup(); });
+  }
+
+  // ─── Time picker ────────────────────────────────────────────────
+  // Lets the user override the clock so the board shows a chosen
+  // wall-clock time. The override ticks forward from the chosen instant
+  // (anchor + elapsed real time); the "now" button clears it.
+  const timeInput = document.getElementById('time-pick');
+  const timeNowBtn = document.getElementById('time-now');
+
+  function fmtTimeForInput(date) {
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  function clearTimeOverride() {
+    timeOverride = null;
+    if (timeInput) timeInput.value = fmtTimeForInput(new Date());
+    updateClock();
+  }
+
+  if (timeInput) {
+    timeInput.value = fmtTimeForInput(new Date());
+    timeInput.addEventListener('change', () => {
+      const v = timeInput.value;
+      if (!v) return;
+      const [hh, mm, ss] = v.split(':').map((p) => parseInt(p, 10) || 0);
+      const now = new Date();
+      const anchor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, ss || 0, 0);
+      timeOverride = { anchorClock: anchor.getTime(), anchorReal: now.getTime() };
+      updateClock();
+    });
+  }
+  if (timeNowBtn) timeNowBtn.addEventListener('click', clearTimeOverride);
+
   // Build SHA — replaced by the deploy workflow
   const buildShaEl = document.getElementById('build-sha');
   if (buildShaEl) {
@@ -584,21 +816,22 @@
 
   // Default to today in Jerusalem time and initialise both pickers
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  dateInput.value = todayStr;
   const [ty, tm, td] = todayStr.split('-').map(Number);
   const todayJs = new Date(ty, tm - 1, td);
+  syncGregSelectors(todayJs);
   syncGregToHebrew(todayJs);
   renderForDate(todayJs);
 
-  // Re-tick on each wall-clock minute boundary. setTimeout (rescheduled
-  // every tick) instead of setInterval keeps us aligned to the real
-  // minute even if a tab-throttle event delays a single fire.
+  // Re-tick on each wall-clock minute (or second, with ?seconds)
+  // boundary. setTimeout rescheduled every tick keeps us aligned to
+  // the real boundary even if a tab-throttle event delays a single fire.
   function scheduleNextClockTick() {
-    const msToNextMinute = 60_000 - (Date.now() % 60_000);
+    const period = SHOW_SECONDS ? 1_000 : 60_000;
+    const msToNext = period - (Date.now() % period);
     setTimeout(() => {
       updateClock();
       scheduleNextClockTick();
-    }, msToNextMinute);
+    }, msToNext);
   }
   scheduleNextClockTick();
 })();
