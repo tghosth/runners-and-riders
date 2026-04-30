@@ -69,6 +69,15 @@
     'Sigd',
   ]);
 
+  // Hebcal's MINOR_HOLIDAY flag covers a wider set (Lag BaOmer, Tu
+  // BiShvat, Tu B'Av, Pesach Sheni, Leil Selichot, Chag HaBanot, Erev
+  // events, …). Same opt-in pattern as KEPT_MODERN_HOLIDAYS — only the
+  // descs in here surface as a body row.
+  const KEPT_MINOR_HOLIDAYS = new Set([
+    'Lag BaOmer',
+    'Tu BiShvat',
+  ]);
+
   // Hebcal renders Chanukah days as "חנוכה: X' נרות" — the colon and
   // נרות push days 2–8 to 14 chars, over the row width. We compress to
   // "חנוכה X'" (≤8 chars). The English desc is "Chanukah: N Candle(s)"
@@ -176,16 +185,25 @@
     // Rosh Chodesh — no row-1 override, but יעלה ויבוא is said
     const roshChodesh = !!events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.ROSH_CHODESH));
 
-    // Chanukah / Purim — prefer non-candle events for cleaner Hebrew text
+    // Chanukah / Purim — prefer non-candle events for cleaner Hebrew
+    // text. Erev Purim is excluded (EREV flag) so only the actual
+    // festive day fires; otherwise "ערב פורים" would surface and
+    // (incorrectly) pull in על הניסים.
+    const purimChanukahMatch = e => {
+      if (getFlags(e) & HEBCAL_FLAGS.EREV) return false;
+      return /chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e));
+    };
     const chanukahOrPurim =
-      events.find(e => !(getFlags(e) & HEBCAL_FLAGS.CHANUKAH_CANDLES) &&
-                       (/chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e)))) ||
-      events.find(e => /chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e)));
+      events.find(e => !(getFlags(e) & HEBCAL_FLAGS.CHANUKAH_CANDLES) && purimChanukahMatch(e)) ||
+      events.find(purimChanukahMatch);
 
     const modernEv = events.find(e =>
       (getFlags(e) & HEBCAL_FLAGS.MODERN_HOLIDAY) && KEPT_MODERN_HOLIDAYS.has(getDesc(e)));
 
-    const specialEv = chanukahOrPurim || modernEv;
+    const minorEv = events.find(e =>
+      (getFlags(e) & HEBCAL_FLAGS.MINOR_HOLIDAY) && KEPT_MINOR_HOLIDAYS.has(getDesc(e)));
+
+    const specialEv = chanukahOrPurim || modernEv || minorEv;
     const specialDay = specialEv ? (overrideLabel(specialEv) || renderHe(specialEv)) : '';
     const alHaNisim = !!chanukahOrPurim;
 

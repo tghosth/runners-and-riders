@@ -236,6 +236,28 @@ console.log('\n── Liturgy.getDayInfo (modern holiday allowlist)');
   }
 }
 
+console.log('\n── Liturgy.getDayInfo (minor holiday allowlist + Erev Purim drop)');
+{
+  // Lag BaOmer (18 Iyar) and Tu BiShvat (15 Shvat) opt in.
+  eq('Lag BaOmer (Tue 5 May 2026): shown',
+    Liturgy.getDayInfo(new Date(2026, 4, 5)).specialDay, "ל\"ג בעומר");
+  eq('Tu BiShvat (Mon 2 Feb 2026): shown',
+    Liturgy.getDayInfo(new Date(2026, 1, 2)).specialDay, "ט\"ו בשבט");
+  // Erev Purim no longer surfaces (was being matched by the
+  // chanukahOrPurim regex); also no on על הניסים.
+  const erevPurim = Liturgy.getDayInfo(new Date(2025, 2, 13));  // Thu 13 Mar 2025
+  eq('Erev Purim: specialDay hidden', erevPurim.specialDay, '');
+  eq('Erev Purim: alHaNisim false', erevPurim.alHaNisim, false);
+  // Other minor days still filtered out.
+  for (const [label, d] of [
+    ['Pesach Sheni',  new Date(2025, 4, 12)],  // Mon 12 May 2025
+    ['Tu B\'Av',      new Date(2025, 7,  9)],  // Sat 9 Aug 2025
+    ['Leil Selichot', new Date(2025, 8, 13)],  // Sat 13 Sep 2025
+  ]) {
+    eq(`${label}: hidden`, Liturgy.getDayInfo(d).specialDay, '');
+  }
+}
+
 // Fast days — minor (Tzom Gedaliah, Asara B'Tevet, Ta'anit Esther,
 // 17 Tammuz, Ta'anit Bechorot) and major (Tisha B'Av). Yom Kippur is
 // already handled by the CHAG branch as a row-1 holidayName, so we
