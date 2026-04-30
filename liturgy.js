@@ -34,6 +34,37 @@
     'Shabbat Zachor':    'פרשת זכור',
   };
 
+  // Hebrew labels we override on Hebcal's stock rendering — either to
+  // fit the 13-cell row width or to give a more recognisable / proper
+  // name. Keyed by the English description (e.getDesc()). The 13-char
+  // ceiling is enforced by the body-row test in tests/run.js, so this
+  // table is what catches future Hebcal additions before they truncate.
+  const HOLIDAY_OVERRIDES = {
+    // Day 7 of Sukkot Chol HaMoed — its own well-known name.
+    'Sukkot VII (Hoshana Raba)': 'הושענא רבה',
+    // Modern Israeli observances whose Hebrew rendering overflows.
+    'Hebrew Language Day':            'יום השפה',
+    'Jabotinsky Day':                 'ז׳בוטינסקי',
+    'Rosh Hashana LaBehemot':         'ר״ה לבהמה',
+    'Yitzhak Rabin Memorial Day':     'יום רבין',
+    'Yom HaAliyah School Observance': 'יום העליה',
+    // Adar I in a leap year — minor commemoration.
+    'Shushan Purim Katan':            'ש״פ קטן',
+  };
+
+  // Hebcal renders Chanukah days as "חנוכה: X׳ נרות" — the colon and
+  // נרות push days 2–8 to 14 chars, over the row width. We compress to
+  // "חנוכה X׳" (≤8 chars). The English desc is "Chanukah: N Candle(s)"
+  // or "Chanukah: 8th Day"; either way the leading number is the day.
+  const CHANUKAH_DAY = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'];
+  function chanukahOverride(en) {
+    const m = en.match(/^Chanukah:\s+(\d+)/);
+    if (!m) return null;
+    const day = parseInt(m[1], 10);
+    if (day < 1 || day > 8) return null;
+    return 'חנוכה ' + CHANUKAH_DAY[day] + '׳';
+  }
+
   // Strip Hebrew niqqud + cantillation (U+0591–U+05C7) but preserve the
   // maqaf (U+05BE) — it's inside the same Unicode range yet is a real
   // punctuation character used between words like אחרי מות־קדשים.
@@ -71,17 +102,34 @@
       }) || [];
     } catch {}
 
+    const getDesc  = e => { try { return e.getDesc() || ''; } catch { return ''; } };
     const getFlags = e => { try { return e.getFlags(); } catch { return 0; } };
     const renderEn = e => { try { return e.render('en') || ''; } catch { return ''; } };
     const renderHe = e => stripNiqqud((() => { try { return e.render('he') || ''; } catch { return ''; } })());
 
-    // Chol HaMoed — fixed Hebrew string + יעלה ויבוא
+    // Returns an override string from HOLIDAY_OVERRIDES / Chanukah, or
+    // null if Hebcal's own Hebrew rendering should be used. Centralised
+    // so every branch (cholHamoed / yomTov / specialDay) hits it the
+    // same way.
+    const overrideLabel = e => {
+      const desc = getDesc(e);
+      if (desc.startsWith('Chanukah')) {
+        const c = chanukahOverride(desc);
+        if (c) return c;
+      }
+      return HOLIDAY_OVERRIDES[desc] || null;
+    };
+
+    // Chol HaMoed — fixed Hebrew string + יעלה ויבוא. Hoshana Rabbah is
+    // a Sukkot Chol HaMoed day in Hebcal's eyes, but its proper name
+    // wins via HOLIDAY_OVERRIDES before the generic fallback.
     const cholHamoed = events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.CHOL_HAMOED));
     if (cholHamoed) {
       const en = renderEn(cholHamoed);
-      const name = /pesach|passover/i.test(en) ? 'חול המועד פסח'
-                 : /sukkot/i.test(en)          ? 'ח המועד סוכות'
-                 : renderHe(cholHamoed);
+      const name = overrideLabel(cholHamoed)
+                 || (/pesach|passover/i.test(en) ? 'חול המועד פסח'
+                  :  /sukkot/i.test(en)          ? 'ח המועד סוכות'
+                  :  renderHe(cholHamoed));
       return {
         holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false,
         roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
@@ -114,7 +162,7 @@
     const modernEv = events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.MODERN_HOLIDAY));
 
     const specialEv = chanukahOrPurim || modernEv;
-    const specialDay = specialEv ? renderHe(specialEv) : '';
+    const specialDay = specialEv ? (overrideLabel(specialEv) || renderHe(specialEv)) : '';
     const alHaNisim = !!chanukahOrPurim;
 
     // Parshiyot + Shabbat HaGadol — keyed by Hebcal's English desc so we

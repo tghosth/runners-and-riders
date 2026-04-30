@@ -175,6 +175,32 @@ console.log('\n── Liturgy.getDisplayText (no day exceeds 7 non-empty body ro
     `worst: ${worst} rows on ${worstDate && worstDate.toDateString()}`);
 }
 
+// Truncation at the cell-row level is silent — renderMessage in
+// app.js slices anything over 13 chars off the visible end. Walk every
+// day for several years and assert every body row stays within 13. If
+// Hebcal ever adds a new label or a parsha lands without an override,
+// this test catches it before it ships.
+console.log('\n── Liturgy.getDisplayText (every body row ≤ 13 chars, 2024–2030)');
+{
+  const MAX_COLS = 13;
+  const offenders = [];
+  const start = new Date(2024, 0, 1), end = new Date(2030, 11, 31);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const rows = Liturgy.getDisplayText(d).split('\n');
+    for (const row of rows) {
+      if (Array.from(row).length > MAX_COLS) {
+        offenders.push({ date: new Date(d), row, len: Array.from(row).length });
+        if (offenders.length >= 10) break;
+      }
+    }
+    if (offenders.length >= 10) break;
+  }
+  check('no body row exceeds 13 chars', offenders.length === 0,
+    offenders.length
+      ? offenders.map(o => `${o.date.toDateString()}: ${JSON.stringify(o.row)} (${o.len})`).join('\n      ')
+      : null);
+}
+
 console.log('\n── Liturgy.getDayInfo (Rosh Chodesh)');
 const ROSH_CASES = [
   ['1 Iyar 5786',  new Date(2026, 3, 18), true],  // Sat 18 Apr 2026
