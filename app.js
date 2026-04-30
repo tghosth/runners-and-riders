@@ -85,20 +85,15 @@
   // sits at the RTL start = visual right.
   // The time block is always 8 flap cells wide (HH:MM:SS-shaped),
   // regardless of whether ?seconds is on. With seconds the cells show
-  // "HH:MM:SS"; without, the cells show "HH:MM:  " — both colons stay
-  // present (and static, see buildTimeChars below) and the trailing
-  // pair of blanks where SS would go don't flicker through random
-  // digits during the cascade.
+  // "HH:MM:SS"; without, the first 5 show "HH:MM" and the trailing 3
+  // are blank flaps (no second colon — that only appears when seconds
+  // are actually being shown). The trailing blanks are _static so
+  // they don't flicker through random digits during the cascade.
   const TIME_COLS = 8;
 
-  // Returns 8 chars for the time block. When ?seconds is on, that's
-  // exactly the formatter's "HH:MM:SS"; when off, "HH:MM" is padded
-  // to "HH:MM:  " so the minutes-to-seconds colon is present in both
-  // modes — both colons get _static below so neither flickers on
-  // load.
   function buildTimeChars() {
     const chars = Array.from(TIME_FMT.format(getDisplayedTime()));
-    if (!SHOW_SECONDS) chars.push(':', ' ', ' ');
+    while (chars.length < TIME_COLS) chars.push(' ');
     return chars;
   }
 
