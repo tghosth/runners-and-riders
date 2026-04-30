@@ -116,13 +116,22 @@ main {
   direction: ltr;
 }
 
-/* Header cells flex-fill the row (drop the old fixed-width override),
-   so 16 tiles span the frame width with the same gaps as a body row.
-   Cells in a body row are slightly larger because there are only 13
-   of them — that subordination is exactly the visual hierarchy we
-   want, no extra rules needed. */
+/* Header cells flex-fill the row (no fixed-width override), so 18
+   tiles span the frame width with the same gaps as a body row. Body
+   rows have 13 flex-filling cells, so body cells are slightly wider
+   than header cells — that subordination is exactly the visual
+   hierarchy we want, no extra rules needed. */
 .board-header .cell {
   /* falls through to `.cell { flex: 1 1 0; … }` */
+}
+
+/* Cells in the notile section between dow and time. Same width and
+   height as a real flap cell (so the row stays uniform), but with no
+   visual content — the brass plate of .display-frame shows through. */
+.board-header .header-notile-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
 }
 
 /* Footer for the Sefirat HaOmer count — mirrors the header's "smaller

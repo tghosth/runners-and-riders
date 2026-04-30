@@ -85,23 +85,27 @@
   // sits at the RTL start = visual right.
   const TIME_COLS = SHOW_SECONDS ? 8 : 5;
 
-  // Both header rows are padded to exactly HEADER_COLS flap cells, so
-  // the date row (top) and the dow + time row (bottom) line up tile-
-  // for-tile. 16 is wide enough for the longest possible date string
-  // (e.g. "י\"א אדר א' תשפ\"ד" — 16 chars in an Adar I leap year),
-  // so the date never has to drop its gershayim or get truncated.
-  const HEADER_COLS = 16;
-  // Cells of brass-plate space we leave between the dow label and the
-  // time block on the bottom row. Always ≥ 1, so there's at least one
-  // empty tile separating them — even with ?seconds (8 time cells +
-  // 7 dow cells + 1 spacer = 16). On the default no-seconds run that
-  // resolves to 4 spacer cells.
-  const HEADER_GAP_COLS = Math.max(1, HEADER_COLS - 7 /* DOW_COLS */ - TIME_COLS);
+  // Both header rows are 18 cell-widths across so the top (date) and
+  // bottom (dow / brass / time) line up tile-for-tile. 18 is wide
+  // enough for the longest possible date string (e.g.
+  // "י\"א אדר א' תשפ\"ד" — 16 chars in an Adar I leap year, plus a
+  // pair of trailing blank flaps), so the date never has to drop its
+  // gershayim or get truncated.
+  const HEADER_COLS = 18;
+  // Cell-widths of pure brass plate (no flap) between the dow section
+  // and the time section. The two cells in this gap are *not* tiles —
+  // the brass background shows through directly.
+  const HEADER_NOTILE_COLS = 2;
+  // The dow section takes whatever width is left over once we've
+  // reserved space for the no-tile gap and the time block. With the
+  // default HH:MM time that's 11 cells (5 dow chars + 6 padding flaps
+  // for weekdays, 7 + 4 for Shabbat); with ?seconds HH:MM:SS it's 8.
+  const DOW_TOTAL_COLS = HEADER_COLS - HEADER_NOTILE_COLS - TIME_COLS;
 
   // Day-of-week labels: יום א' through יום ו' (5 chars each) and the
-  // longer יום שבת on Saturday (7 chars). The DOW section is sized to
-  // the longest variant; shorter labels get trailing blank cells on
-  // the visual left.
+  // longer יום שבת on Saturday (7 chars). The dow section is wider
+  // than the longest label (DOW_TOTAL_COLS); short labels are
+  // padded with trailing blank flaps on the visual left.
   const HEBREW_DOW = [
     "יום א'",   // 0 = Sunday
     "יום ב'",   // 1 = Monday
@@ -111,7 +115,6 @@
     "יום ו'",   // 5 = Friday
     "יום שבת",  // 6 = Saturday
   ];
-  const DOW_COLS = 7;
   function dowText(jsDate) { return HEBREW_DOW[jsDate.getDay()]; }
 
   // Footer (sefira count) layout. Lines are padded to FOOTER_COLS so
@@ -233,7 +236,7 @@
   // the day-of-week (visual right), spacer cells, and the wall-clock
   // time (visual left). Both rows are padded to exactly HEADER_COLS
   // flap cells so they line up tile-for-tile, and the bottom row
-  // always has at least HEADER_GAP_COLS empty cells separating dow
+  // always has HEADER_NOTILE_COLS pure-brass cells separating dow
   // from time. Returns { headerEl, allCells } in cascade order.
   function buildHeaderRow(forDate) {
     const dateChars = Array.from(formatHebrewDate(forDate));
@@ -256,35 +259,40 @@
       appendCell(dateSection, ' ', HEBREW_CHAR_SET, [headerDateCells, allCells]);
     }
 
-    // ── Bottom row: dow (right) + spacer + time (left)
+    // ── Bottom row: dow section (right) + 2 brass cells (no flap)
+    //              + time section (left)
     const bottomRow = document.createElement('div');
     bottomRow.className = 'header-bottom-row';
 
-    // dowSection: DOW_COLS cells. Chars first (visual right), blank
-    // padding cells after for shorter weekday labels. Section's
-    // flex-grow is set to its cell count so the three siblings
-    // (dow / spacer / time) share the row width proportionally —
-    // every cell ends up the same width as a flat 16-cell row.
+    // dowSection: DOW_TOTAL_COLS cells of flap. The label chars come
+    // first (visual right) and the rest of the section is padded with
+    // blank flaps. Section's flex-grow is its cell count so the three
+    // siblings (dow / notile / time) share the row width proportionally
+    // — every flap-cell ends up the same width as if the whole row
+    // were a flat 18-cell strip.
     const dowSection = document.createElement('div');
     dowSection.className = 'header-section header-dow';
-    dowSection.style.flex = `${DOW_COLS} 1 0`;
+    dowSection.style.flex = `${DOW_TOTAL_COLS} 1 0`;
     headerDowCells = [];
     for (const ch of dowChars) {
       appendCell(dowSection, ch, HEBREW_CHAR_SET, [headerDowCells, allCells]);
     }
-    for (let i = dowChars.length; i < DOW_COLS; i += 1) {
+    for (let i = dowChars.length; i < DOW_TOTAL_COLS; i += 1) {
       appendCell(dowSection, ' ', HEBREW_CHAR_SET, [headerDowCells, allCells]);
     }
 
-    // Spacer: a short run of blank cells between dow and time. Same
-    // visual gap (var(--cell-gap)) on either side as the cells inside
-    // the sections, so the row reads as one continuous strip of HEADER_COLS
-    // flaps with the central few left empty.
-    const spacerSection = document.createElement('div');
-    spacerSection.className = 'header-section header-spacer';
-    spacerSection.style.flex = `${HEADER_GAP_COLS} 1 0`;
-    for (let i = 0; i < HEADER_GAP_COLS; i += 1) {
-      appendCell(spacerSection, ' ', HEBREW_CHAR_SET, [allCells]);
+    // notileSection: HEADER_NOTILE_COLS cells of pure brass — no flap,
+    // no border, no background. Just transparent space so the brass
+    // plate of the .display-frame shows through. The empty divs share
+    // the .header-notile-cell flex/aspect-ratio so they take up the
+    // same width and height as a flap cell would.
+    const notileSection = document.createElement('div');
+    notileSection.className = 'header-section header-notile';
+    notileSection.style.flex = `${HEADER_NOTILE_COLS} 1 0`;
+    for (let i = 0; i < HEADER_NOTILE_COLS; i += 1) {
+      const empty = document.createElement('div');
+      empty.className = 'header-notile-cell';
+      notileSection.appendChild(empty);
     }
 
     // timeSection: dir="ltr" so HH:MM (or HH:MM:SS) renders forwards.
@@ -298,11 +306,11 @@
       if (ch === ':') cell._static = true;
     }
 
-    // DOM order: dow → spacer → time. With dir="rtl" inherited on
-    // bottomRow, that puts dow on the visual right and time on the
-    // visual left, with the spacer between them.
+    // DOM order: dow → notile → time. With dir="rtl" inherited on
+    // bottomRow, the dow section sits on the visual right and time
+    // on the visual left, separated by the two brass cells.
     bottomRow.appendChild(dowSection);
-    bottomRow.appendChild(spacerSection);
+    bottomRow.appendChild(notileSection);
     bottomRow.appendChild(timeSection);
 
     headerEl.appendChild(dateSection);
@@ -368,8 +376,8 @@
     // Pad date and dow to their respective full widths so cells past
     // the new date's length settle to a literal ' ' (rather than
     // keeping whatever char was there from the previous date).
-    while (dateChars.length < HEADER_COLS) dateChars.push(' ');
-    while (dowChars.length  < DOW_COLS)    dowChars.push(' ');
+    while (dateChars.length < HEADER_COLS)     dateChars.push(' ');
+    while (dowChars.length  < DOW_TOTAL_COLS)  dowChars.push(' ');
 
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;

@@ -323,7 +323,8 @@ for (const [label, jsDate, expected] of OMER_DAY_CASES) {
 
 // Header day-of-week labels: יום א' through יום ו' for Sun–Fri, and
 // יום שבת for Saturday. The longer Saturday form drives the section
-// width (DOW_COLS = 7); the test pins the mapping so a future shuffle
+// minimum dow-section width (7 char cells); the test pins the mapping
+// so a future shuffle
 // of the table can't go silently sideways.
 console.log('\n── Header day-of-week labels');
 {
@@ -344,9 +345,12 @@ console.log('\n── Header day-of-week labels');
   ]) {
     eq(`${d.toDateString()} → dow`, dowOf(d), expected);
   }
-  // Saturday is the longest; everything else fits in DOW_COLS = 7
+  // Saturday is the longest; the dow section is sized to fit it +
+  // padding. If a future label tweak grows past 7 chars without the
+  // section growing too, the right end of the label would run into
+  // the no-tile gap.
   const longest = Math.max(...HEBREW_DOW.map(s => Array.from(s).length));
-  eq('longest dow label is 7 chars (drives DOW_COLS)', longest, 7);
+  eq('longest dow label is 7 chars', longest, 7);
 }
 
 // The header date should use single-vav month spellings (סיון, חשון)
