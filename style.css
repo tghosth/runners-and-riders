@@ -86,28 +86,11 @@ main {
   margin-bottom: 1.5rem;
 }
 
-/* Brass plate above the flaps: 24-hour Jerusalem time on the visual
-   left, Jewish (Hebrew) date on the visual right. dir="rtl" + flex
-   space-between handles the layout: DOM-first child (date) sits at the
-   RTL start = visual right, DOM-last child (time) sits at the end =
-   visual left. */
-.board-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 0.15rem 0.35rem 0.7rem;
-  margin-bottom: 0.7rem;
-  border-bottom: 1px solid rgba(156, 127, 74, 0.35);
-  color: var(--brass);
-  font-weight: 700;
-  font-size: clamp(0.85rem, 2.2vw, 1.4rem);
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
-}
-
-.board-time {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+/* The first board-row is the brass-plate header (date + time). It uses
+   the exact same flap cells as the body rows; the only difference is a
+   little extra space below to separate it from the message. */
+.board-row.board-header-row {
+  margin-bottom: calc(var(--cell-gap) * 2);
 }
 
 .board {

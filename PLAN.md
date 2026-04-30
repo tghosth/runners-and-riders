@@ -198,6 +198,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 
 - **Clock + Hebrew date header; default 7-line message.** Added a brass-toned `.board-header` inside `.display-frame` above the flaps. The 24-hour Asia/Jerusalem time sits on the visual left and the Hebrew calendar date (locale `he-IL-u-ca-hebrew-nu-hebr`) on the visual right via `flex` + `justify-content: space-between`. `updateClock()` formats both with `Intl.DateTimeFormat` and re-ticks aligned to the next minute boundary so the time stays in sync with wall-clock minutes. Default textarea content extended from 4 to 7 sample lines (`rows="7"`).
 
+- **Header rendered as flap cells.** Replaced the brass-text header with a real `.board-row` of the same flap cells used for the message: 8 cells of Hebrew date on the visual right, 5 cells of `HH:MM` time on the visual left, padding cells in the middle (13 total — same as every body row, so flap sizes stay uniform). `dayGematria()` builds Hebrew day numerals manually (ט״ו / ט״ז for 15 / 16) so the result doesn't depend on `nu-hebr` browser support; `formatHebrewDate()` falls back to mark-stripped or truncated forms only for leap-year Adar A / B and a couple of other dates that exceed 8 chars with full marks. `updateClock` cancels any in-progress cycle on a cell before flipping (so a minute tick mid-cascade doesn't stomp the cycle), and `buildGrid` now always pads body rows to `MAX_COLS = 13` so the header and message rows share identical cell widths regardless of message length.
+
 ---
 
 ## Out of Scope (v1)
