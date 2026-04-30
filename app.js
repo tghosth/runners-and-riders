@@ -85,11 +85,22 @@
   // sits at the RTL start = visual right.
   // The time block is always 8 flap cells wide (HH:MM:SS-shaped),
   // regardless of whether ?seconds is on. With seconds the cells show
-  // "HH:MM:SS"; without, the first 5 show "HH:MM" and the remaining
-  // 3 are blank flaps. Keeping the section width fixed means the rest
-  // of the header layout (dow section width, brass gap, total tile
-  // count) doesn't shift between modes.
+  // "HH:MM:SS"; without, the cells show "HH:MM:  " — both colons stay
+  // present (and static, see buildTimeChars below) and the trailing
+  // pair of blanks where SS would go don't flicker through random
+  // digits during the cascade.
   const TIME_COLS = 8;
+
+  // Returns 8 chars for the time block. When ?seconds is on, that's
+  // exactly the formatter's "HH:MM:SS"; when off, "HH:MM" is padded
+  // to "HH:MM:  " so the minutes-to-seconds colon is present in both
+  // modes — both colons get _static below so neither flickers on
+  // load.
+  function buildTimeChars() {
+    const chars = Array.from(TIME_FMT.format(getDisplayedTime()));
+    if (!SHOW_SECONDS) chars.push(':', ' ', ' ');
+    return chars;
+  }
 
   // Both header rows are 18 cell-widths across so the top (date) and
   // bottom (dow / brass / time) line up tile-for-tile. 18 is wide
@@ -246,7 +257,7 @@
   // from time. Returns { headerEl, allCells } in cascade order.
   function buildHeaderRow(forDate) {
     const dateChars = Array.from(formatHebrewDate(forDate));
-    const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
+    const timeChars = buildTimeChars();
     const dowChars  = Array.from(dowText(forDate));
 
     const headerEl = document.createElement('div');
@@ -302,8 +313,10 @@
     }
 
     // timeSection: dir="ltr" so HH:MM (or HH:MM:SS) renders forwards.
-    // Always TIME_COLS = 8 cells wide; trailing cells past the formatted
-    // time (when ?seconds is off) get blank flap padding.
+    // buildTimeChars() always returns TIME_COLS = 8 chars. Colons and
+    // the trailing-blanks (when ?seconds is off) get _static so they
+    // skip the random-cycle phase on load and during ticks — only the
+    // digit positions actually flip.
     const timeSection = document.createElement('div');
     timeSection.className = 'header-section header-time';
     timeSection.setAttribute('dir', 'ltr');
@@ -311,10 +324,7 @@
     headerTimeCells = [];
     for (const ch of timeChars) {
       const cell = appendCell(timeSection, ch, TIME_CHAR_SET, [headerTimeCells, allCells]);
-      if (ch === ':') cell._static = true;
-    }
-    for (let i = timeChars.length; i < TIME_COLS; i += 1) {
-      appendCell(timeSection, ' ', TIME_CHAR_SET, [headerTimeCells, allCells]);
+      if (ch === ':' || ch === ' ') cell._static = true;
     }
 
     // DOM order: dow → notile → time. With dir="rtl" inherited on
@@ -381,16 +391,14 @@
 
   function updateClock() {
     if (!headerTimeCells.length && !headerDateCells.length) return;
-    const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
+    const timeChars = buildTimeChars();
     const dateChars = Array.from(formatHebrewDate(selectedDate));
     const dowChars  = Array.from(dowText(selectedDate));
-    // Pad date / dow / time to their respective full widths so cells
-    // past the formatted content settle to a literal ' ' (rather than
-    // keeping whatever char was there before). Only matters for time
-    // when ?seconds is off (the trailing 3 cells stay blank).
+    // Pad date / dow to their respective full widths so cells past
+    // the formatted content settle to a literal ' '. timeChars is
+    // already 8 chars from buildTimeChars().
     while (dateChars.length < HEADER_COLS)     dateChars.push(' ');
     while (dowChars.length  < DOW_TOTAL_COLS)  dowChars.push(' ');
-    while (timeChars.length < TIME_COLS)       timeChars.push(' ');
 
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;
