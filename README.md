@@ -49,8 +49,9 @@ Everything else is hand-written:
 |---|---|
 | `index.html` | Page structure: board frame, date / time / nav controls, footer |
 | `style.css` | Jerusalem stone palette, flap-cell layout, 3D fold animation |
-| `app.js` | Split-flap engine, header / body / footer layout, scheduler, date pickers, tzeit rollover |
-| `liturgy.js` | What goes on each row — Hebcal queries, holiday overrides, Sefirat HaOmer text, balanced line-wrap |
+| `core.js` | Pure calendar primitives — Hebrew month math, gematria, day-of-week, date formatting, tzeit hakochavim. No DOM. |
+| `liturgy.js` | What goes on each row — Hebcal queries, holiday overrides, Sefirat HaOmer text, balanced line-wrap. No DOM. |
+| `app.js` | UI layer — split-flap engine, header / body / footer layout, scheduler, date pickers, render state |
 | `tests/run.js` | Regression suite — see [Tests](#tests) below |
 
 The full row-order rules and grammatical conventions are documented
@@ -85,13 +86,10 @@ separately in [`LITURGY.md`](LITURGY.md).
 
 ### Code-level knobs
 
-Drop into `app.js` for layout / location / pace, `liturgy.js` for what
-counts as a "special" day:
-
 | Constant | File | Purpose |
 |---|---|---|
+| `ROLLOVER_LAT` / `_LON` / `_ELEV` / `_TZ` / `_DEPRESSION_DEG` | `core.js` | The geographic location used for the tzeit-hakochavim rollover. Currently hardcoded to Modi'in; swap for a different lat/lon (or wire to a UI picker / geolocation) to relocate. |
 | `FLICKER_SCALE` | `app.js` | Single knob for the load cascade pace. **10 = baseline**, 5 = 2× faster, 20 = 2× slower. Scales the row stagger and per-cell flip count; the per-flap CSS animation stays constant so individual tile turns always feel snappy. |
-| `ROLLOVER_LAT` / `_LON` / `_ELEV` / `_TZ` / `_DEPRESSION_DEG` | `app.js` | The geographic location used for the tzeit-hakochavim rollover. Currently hardcoded to Modi'in; swap for a different lat/lon (or wire to a UI picker / geolocation) to relocate. |
 | `HEADER_COLS` / `HEADER_NOTILE_COLS` / `TIME_COLS` | `app.js` | Header row geometry. Both header rows are `HEADER_COLS = 18` flap-cells wide; the bottom row reserves `HEADER_NOTILE_COLS = 2` cells of pure brass between the day-of-week and the time. |
 | `FOOTER_COLS` / `FOOTER_MAX_LINES` | `app.js` | Sefirat HaOmer footer geometry. Default 20 cols × 3 lines is the smallest grid that holds every omer day's text. |
 | `KEPT_MODERN_HOLIDAYS` | `liturgy.js` | Allowlist of Hebcal `MODERN_HOLIDAY` events to surface (default: Yom HaShoah, Yom HaZikaron, Yom HaAtzma'ut, Yom Yerushalayim, Sigd). Adding a desc here lights it up; everything else under that flag stays hidden. |
@@ -141,5 +139,5 @@ configured in **Settings → Pages → Source: GitHub Actions**. Allow
 ~1 minute after merge for the deploy to complete.
 
 The workflow injects the commit SHA into `index.html` and `style.css`
-to bust the browser cache for `app.js`, `liturgy.js`, the polyfill, and
+to bust the browser cache for `app.js`, `liturgy.js`, `core.js`, the polyfill, and
 the stone texture image.

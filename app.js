@@ -29,55 +29,20 @@
   // second instead of every minute).
   const SHOW_SECONDS = new URLSearchParams(location.search).has('seconds');
 
-  const { HDate, GeoLocation, Zmanim } = window.hebcal;
+  const { HDate } = window.hebcal;
   const { getDisplayText, getOmerSection, splitBalancedLines } = window.Liturgy;
-
-  // ─── Tzeit hakochavim ────────────────────────────────────────
-  // The Hebrew date rolls over at tzeit hakochavim — when the sun's
-  // centre dips `ROLLOVER_DEPRESSION_DEG` below the horizon (8.5° is
-  // the Geonim / "three medium stars visible" convention). We use
-  // Hebcal's NOAA-based Zmanim class, which exposes the full set of
-  // halachic times (alot, sunrise, chatzot, plag, sunset, tzeit72, …)
-  // from the same GeoLocation — useful when we want more zmanim later.
-  // The bundle uses Temporal.PlainDate internally, so the Temporal
-  // polyfill must load first (see vendor/temporal-polyfill.min.js).
-  //
-  // Hardcoded for now: Modi'in-Maccabim-Re'ut, Israel. Swap these
-  // constants (or wire them to a picker / geolocation) to relocate.
-  const ROLLOVER_LAT  = 31.8924;   // °N
-  const ROLLOVER_LON  = 35.0103;   // °E
-  const ROLLOVER_ELEV = 290;       // m above sea level
-  const ROLLOVER_TZ   = 'Asia/Jerusalem';
-  const ROLLOVER_DEPRESSION_DEG = 8.5;
-  const ROLLOVER_LOC = new GeoLocation(
-    'Rollover Location',
-    ROLLOVER_LAT,
-    ROLLOVER_LON,
-    ROLLOVER_ELEV,
+  // Pure calendar / Hebrew-math helpers extracted into core.js so the
+  // render layer below stays the only thing that touches the DOM. If
+  // a future redesign replaces the flap board with a different UI,
+  // core.js + liturgy.js stay; only this file (the render + scheduler
+  // + pickers) gets rewritten.
+  const {
+    hebrewIsLeapYear, hebrewDaysInMonth, hebrewMonthName,
+    dayGematria, yearGematria,
+    formatHebrewDate, dowText,
+    tzeitForLocalDate, getEffectiveTodayJs,
     ROLLOVER_TZ,
-  );
-
-  function tzeitForLocalDate(year, month, day) {
-    // Zmanim takes a JS Date pinned to the local civil date — only
-    // the y/m/d components are read, time-of-day is ignored.
-    const z = new Zmanim(ROLLOVER_LOC, new Date(year, month - 1, day), false);
-    return z.tzeit(ROLLOVER_DEPRESSION_DEG);
-  }
-
-  // Returns a JS Date set to midnight (browser-local) representing the
-  // *effective* Hebrew calendar day for `realNow`: today's local civil
-  // date at the rollover location if before tzeit, the next civil date
-  // once tzeit has passed. The HDate constructor uses the day component
-  // of the date, so the wall-clock crossover propagates cleanly.
-  function getEffectiveTodayJs(realNow) {
-    const isoStr = realNow.toLocaleDateString('en-CA', { timeZone: ROLLOVER_TZ });
-    const [y, m, d] = isoStr.split('-').map(Number);
-    const tz = tzeitForLocalDate(y, m, d);
-    if (tz && realNow.getTime() >= tz.getTime()) {
-      return new Date(y, m - 1, d + 1);
-    }
-    return new Date(y, m - 1, d);
-  }
+  } = window.Core;
 
   // True until the user manually picks a date — controls whether the
   // displayed date auto-advances at tzeit each evening.
@@ -121,21 +86,6 @@
   // for weekdays, 7 + 4 for Shabbat); with ?seconds HH:MM:SS it's 8.
   const DOW_TOTAL_COLS = HEADER_COLS - HEADER_NOTILE_COLS - TIME_COLS;
 
-  // Day-of-week labels: יום א' through יום ו' (5 chars each) and the
-  // longer יום שבת on Saturday (7 chars). The dow section is wider
-  // than the longest label (DOW_TOTAL_COLS); short labels are
-  // padded with trailing blank flaps on the visual left.
-  const HEBREW_DOW = [
-    "יום א'",   // 0 = Sunday
-    "יום ב'",   // 1 = Monday
-    "יום ג'",   // 2 = Tuesday
-    "יום ד'",   // 3 = Wednesday
-    "יום ה'",   // 4 = Thursday
-    "יום ו'",   // 5 = Friday
-    "יום שבת",  // 6 = Saturday
-  ];
-  function dowText(jsDate) { return HEBREW_DOW[jsDate.getDay()]; }
-
   // Footer (sefira count) layout. Lines are padded to FOOTER_COLS so
   // cells stay uniformly sized across rows. 20 cells × 3 lines is the
   // smallest grid that holds every omer day's text (worst case is
@@ -163,66 +113,6 @@
   function getDisplayedTime() {
     if (timeOverride === null) return new Date();
     return new Date(timeOverride.anchorClock + (Date.now() - timeOverride.anchorReal));
-  }
-
-  // We used to format the header's Hebrew month name via
-  //   new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { month: 'long' })
-  // but the Academy-of-Hebrew spelling that comes out (סיוון, חשוון)
-  // didn't match the single-vav spellings the date-picker uses (סיון,
-  // חשון), and didn't match traditional siddurim. The header now reads
-  // its month name from `hebrewMonthName()` below, sharing one source
-  // of truth between the picker and the board.
-
-  // Shared gematria letter tables
-  const G_ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
-  const G_TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
-  // Hundreds: 100–400 are single letters; 500–900 use repeated ת (400).
-  const G_HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
-
-  // Day-of-month gematria (1–30). 15 and 16 use the conventional ט"ו /
-  // ט"ז to avoid spelling fragments of the divine name. Quote marks
-  // here are ASCII ' and " (geresh/gershayim look directional in some
-  // fonts; we standardise on straight quotes everywhere).
-  const GEMATRIA_ONES = G_ONES;
-  const GEMATRIA_TENS = ['', 'י', 'כ', 'ל'];
-  function dayGematria(n, withMarks) {
-    if (n === 15) return withMarks ? 'ט"ו' : 'טו';
-    if (n === 16) return withMarks ? 'ט"ז' : 'טז';
-    const tens = Math.floor(n / 10);
-    const ones = n % 10;
-    if (n < 10) return withMarks ? GEMATRIA_ONES[ones] + "'" : GEMATRIA_ONES[ones];
-    if (ones === 0) return withMarks ? GEMATRIA_TENS[tens] + "'" : GEMATRIA_TENS[tens];
-    return withMarks
-      ? GEMATRIA_TENS[tens] + '"' + GEMATRIA_ONES[ones]
-      : GEMATRIA_TENS[tens] + GEMATRIA_ONES[ones];
-  }
-
-  // Hebrew year gematria (e.g. 5785 → "תשפ"ה"), dropping the thousands digit.
-  function yearGematria(year, withMarks) {
-    const n = year % 1000;
-    const h = Math.floor(n / 100);
-    const rem = n % 100;
-    let tensOnes;
-    if (rem === 15) tensOnes = 'טו';
-    else if (rem === 16) tensOnes = 'טז';
-    else tensOnes = G_TENS[Math.floor(rem / 10)] + G_ONES[rem % 10];
-    const str = G_HUNDREDS[h] + tensOnes;
-    if (!withMarks) return str;
-    if (str.length === 0) return str;
-    if (str.length === 1) return str + "'";
-    return str.slice(0, -1) + '"' + str.slice(-1);
-  }
-
-  // Format the Hebrew date as `[day-gematria] [month] [year]`. The
-  // longest possible string is 16 chars (an Adar I leap-year date),
-  // which fits HEADER_COLS exactly — no trimming or strip-marks
-  // fallback needed.
-  function formatHebrewDate(date) {
-    const hd = new HDate(date);
-    const dayInt = hd.getDate();
-    const hYear = hd.getFullYear();
-    const month = hebrewMonthName(hd.getMonth(), hebrewIsLeapYear(hYear));
-    return `${dayGematria(dayInt, true)} ${month} ${yearGematria(hYear, true)}`;
   }
 
   // The currently-displayed date. Header date reflects this; header time
@@ -599,25 +489,9 @@
   }
 
   // ─── Hebrew date selector helpers ──────────────────────────────
-
-  function hebrewIsLeapYear(year) {
-    return typeof HDate.isLeapYear === 'function'
-      ? HDate.isLeapYear(year)
-      : (7 * year + 1) % 19 < 7;
-  }
-
-  function hebrewDaysInMonth(month, year) {
-    return typeof HDate.daysInMonth === 'function'
-      ? HDate.daysInMonth(month, year)
-      : [0, 30, 29, 30, 29, 30, 29, 30, 29, 29, 29, 30, 29, 29][month] || 29;
-  }
-
-  function hebrewMonthName(month, isLeap) {
-    const NAMES = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול',
-                   'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט',
-                   isLeap ? "אדר א'" : 'אדר', "אדר ב'"];
-    return NAMES[month] || '';
-  }
+  // (Hebrew month math + name lookups now live in core.js; the
+  // `hebrewIsLeapYear` / `hebrewDaysInMonth` / `hebrewMonthName`
+  // names below are the destructured imports from window.Core.)
 
   function populateHebrewYear(sel, targetYear) {
     const current = parseInt(sel.value, 10) || targetYear;

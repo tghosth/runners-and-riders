@@ -25,19 +25,21 @@ const ROOT = path.resolve(__dirname, '..');
 function makeWindow() {
   const polyCode    = fs.readFileSync(path.join(ROOT, 'vendor/temporal-polyfill.min.js'), 'utf8');
   const hebcalCode  = fs.readFileSync(path.join(ROOT, 'vendor/hebcal-core.min.js'), 'utf8');
+  const coreCode    = fs.readFileSync(path.join(ROOT, 'core.js'), 'utf8');
   const liturgyCode = fs.readFileSync(path.join(ROOT, 'liturgy.js'), 'utf8');
   const win = {};
   // Polyfill writes Temporal onto globalThis when its IIFE runs, so
   // we evaluate it in this realm before loading hebcal.
   new Function(polyCode)();
   new Function('window',
-    hebcalCode + '\n; window.hebcal = hebcal;\n' + liturgyCode
+    hebcalCode + '\n; window.hebcal = hebcal;\n' + coreCode + '\n' + liturgyCode
   )(win);
   return win;
 }
 
 const win = makeWindow();
 const Liturgy = win.Liturgy;
+const Core = win.Core;
 const { HDate, GeoLocation, Zmanim } = win.hebcal;
 
 // ── Test runner ──
@@ -431,6 +433,140 @@ console.log('\n── Polar edge case (80°N midsummer — no tzeit)');
   const detectable = t == null || (t instanceof Date && Number.isNaN(t.getTime()));
   check('tzeit returns a null/NaN sentinel', detectable,
     `got ${t} (${Object.prototype.toString.call(t)})`);
+}
+
+// ── Core module (calendar primitives) ──
+//
+// These are the pure helpers extracted into core.js — Hebrew month
+// math, gematria, date / dow formatting, and tzeit. Exercising them
+// directly via window.Core lets tests cover the same code paths the
+// page uses, with no DOM in the way. The sweeps below run the
+// primitives through ~50 years of Hebrew dates so a future tweak
+// can't quietly break a leap year, a particular gematria edge case,
+// or the tzeit solver.
+
+console.log('\n── Core: gematria spot checks');
+{
+  // Day-of-month gematria, with marks
+  for (const [n, expected] of [
+    [1, "א'"], [9, "ט'"], [10, "י'"], [14, "י\"ד"],
+    [15, 'ט"ו'],  [16, 'ט"ז'],  // not "יה" / "יו" (divine name)
+    [17, 'י"ז'], [20, "כ'"], [29, 'כ"ט'], [30, "ל'"],
+  ]) eq(`dayGematria(${n}, true)`, Core.dayGematria(n, true), expected);
+
+  // Hebrew year gematria — current year, leap year, edge centuries
+  for (const [y, expected] of [
+    [5784, 'תשפ"ד'], [5785, 'תשפ"ה'], [5786, 'תשפ"ו'],
+    [5790, "תש\"צ"], [5800, 'ת"ת'],   [5815, 'תתט"ו'],
+  ]) eq(`yearGematria(${y}, true)`, Core.yearGematria(y, true), expected);
+}
+
+console.log('\n── Core: hebrewMonthName + leap-year structure');
+{
+  // Adar → Adar I + Adar II in leap years
+  eq('Adar in non-leap year', Core.hebrewMonthName(12, false), 'אדר');
+  eq("Adar I in leap year",    Core.hebrewMonthName(12, true),  "אדר א'");
+  eq('Adar II in leap year',  Core.hebrewMonthName(13, true),  "אדר ב'");
+  // Sample of non-Adar months — should match across leap / non-leap
+  for (const m of [1, 4, 7, 10]) {
+    eq(`month ${m} same in leap / non-leap`,
+      Core.hebrewMonthName(m, false), Core.hebrewMonthName(m, true));
+  }
+  // 19-year cycle: positions 3, 6, 8, 11, 14, 17, 19 (mod 19 = 3, 6,
+  // 8, 11, 14, 17, 0) are leap. Spot-check the next decade.
+  const knownLeap = [5784, 5787, 5790, 5793, 5795];      // → Adar I/II
+  const knownNonLeap = [5785, 5786, 5788, 5789, 5791];   // → just Adar
+  for (const y of knownLeap)
+    check(`year ${y} is leap`, Core.hebrewIsLeapYear(y));
+  for (const y of knownNonLeap)
+    check(`year ${y} is non-leap`, !Core.hebrewIsLeapYear(y));
+}
+
+console.log('\n── Core: formatHebrewDate over five decades');
+{
+  // Walk from 2024 through 2074 and assert every formatted Hebrew
+  // date is at most 16 chars (the figure HEADER_COLS = 18 in app.js
+  // is built around — anything longer would silently truncate when
+  // the UI tried to lay it out).
+  let worstLen = 0, worstStr = '', worstDate = null;
+  let bad = null;
+  const start = new Date(2024, 0, 1);
+  const end   = new Date(2074, 11, 31);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const s = Core.formatHebrewDate(d);
+    const len = Array.from(s).length;
+    if (len > worstLen) { worstLen = len; worstStr = s; worstDate = new Date(d); }
+    if (len > 16 && !bad) bad = { d: new Date(d), s, len };
+  }
+  check(`every Hebrew date 2024–2074 fits 16 chars (worst: "${worstStr}" — ${worstLen} chars)`,
+    !bad, bad ? `${bad.d.toDateString()}: "${bad.s}" (${bad.len})` : null);
+}
+
+console.log('\n── Core: dowText round-trip across decades');
+{
+  // Pick one date from every month in 2024–2074 and confirm the
+  // mapping matches getDay() exactly. Catches off-by-one regressions
+  // and locale-tinted Date semantics on different machines.
+  const expected = ["יום א'", "יום ב'", "יום ג'", "יום ד'",
+                    "יום ה'", "יום ו'", "יום שבת"];
+  let bad = null;
+  for (let y = 2024; y <= 2074 && !bad; y++) {
+    for (let m = 0; m < 12 && !bad; m++) {
+      const d = new Date(y, m, 15);
+      const got = Core.dowText(d);
+      if (got !== expected[d.getDay()]) bad = { d, got };
+    }
+  }
+  check('dowText matches Date.getDay() for 2024–2074',
+    !bad, bad ? `${bad.d.toDateString()}: got ${JSON.stringify(bad.got)}` : null);
+}
+
+console.log('\n── Core: tzeit (Modi\'in) sanity over five decades');
+{
+  // Sun-position math is well-behaved year-to-year, so we mainly
+  // want to know it doesn't blow up over a long run (no NaN results
+  // anywhere) and that the tzeit times stay reasonable for Modi'in
+  // (between 17:00 and 21:00 local civil time year-round).
+  let bad = null, samples = 0;
+  for (let y = 2024; y <= 2074 && !bad; y++) {
+    // First-of-each-month is enough to walk the seasons without an
+    // O(50 × 365) loop.
+    for (let m = 0; m < 12 && !bad; m++) {
+      const t = Core.tzeitForLocalDate(y, m + 1, 15);
+      if (!(t instanceof Date) || Number.isNaN(t.getTime())) {
+        bad = { y, m, reason: 'NaN/non-Date' };
+        break;
+      }
+      const hm = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(t);
+      const [hh, mm] = hm.split(':').map(Number);
+      const minutes = hh * 60 + mm;
+      if (minutes < 17 * 60 || minutes > 21 * 60) {
+        bad = { y, m, reason: `out-of-range: ${hm}` };
+      }
+      samples++;
+    }
+  }
+  check(`tzeit returns a usable Date for ~${samples} mid-month samples 2024–2074`,
+    !bad, bad ? `year ${bad.y} month ${bad.m + 1}: ${bad.reason}` : null);
+}
+
+console.log('\n── Core: getEffectiveTodayJs rollover at tzeit');
+{
+  // Mid-summer (Jun 21) tzeit in Modi'in is ~20:31 local. Pick a
+  // moment 1 minute before and 1 minute after; the effective JS
+  // date should advance from the same civil day to the next.
+  const tz = Core.tzeitForLocalDate(2026, 6, 21);
+  const before = new Date(tz.getTime() - 60_000);
+  const after  = new Date(tz.getTime() + 60_000);
+  const beforeEff = Core.getEffectiveTodayJs(before);
+  const afterEff  = Core.getEffectiveTodayJs(after);
+  // beforeEff should be the same civil date as `tz`'s local date;
+  // afterEff should be one civil day later.
+  const oneDay = 86_400_000;
+  eq('1 min before tzeit → same civil date',
+    afterEff.getTime() - beforeEff.getTime(), oneDay);
 }
 
 // ── Summary ──

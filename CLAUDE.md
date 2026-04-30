@@ -20,8 +20,9 @@ Live site: https://tghosth.github.io/runners-and-riders/
 /
 ├── index.html                  # Page structure: textarea, button, slider, board
 ├── style.css                   # Jerusalem stone palette + 3D flap-fold animation
-├── app.js                      # Split-flap engine, Hebrew character set, scheduler
-├── liturgy.js                  # Liturgical decision logic (parsha, holidays, יעלה ויבוא, etc.)
+├── core.js                     # Pure calendar primitives — Hebrew month math, gematria, dow, tzeit. No DOM.
+├── liturgy.js                  # Liturgical decision logic (parsha, holidays, יעלה ויבוא, etc.). No DOM.
+├── app.js                      # UI layer — split-flap engine, scheduler, render, pickers, state
 ├── PLAN.md                     # Living implementation plan + changelog
 ├── CLAUDE.md                   # This file
 └── .github/workflows/pages.yml # Auto-deploy to GitHub Pages on push to main

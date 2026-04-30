@@ -249,7 +249,7 @@ Spelling follows the *ktiv chaser* of Ashkenazi siddurim: שלשה (not
 
 The board's "today" rolls over at **tzeit hakochavim in Modi'in** (sun
 8.5° below the horizon — the Geonim convention) instead of at civil
-midnight. Implementation lives in `app.js`, not in this file:
+midnight. Implementation lives in `core.js`, not in this file:
 
 - `tzeitForLocalDate(y, m, d)` constructs a Hebcal `Zmanim` against a
   hardcoded GeoLocation (lat 31.8924° N, lon 35.0103° E, elevation
@@ -257,8 +257,9 @@ midnight. Implementation lives in `app.js`, not in this file:
 - `getEffectiveTodayJs(realNow)` shifts to the next civil date once the
   wall clock has crossed today's tzeit.
 - `liveDateMode` (true until the user explicitly picks a date) drives
-  `maybeAdvanceLiveDate()`, called from each clock tick and from any
-  time-override / "now" button change so the rollover doesn't lag a tick.
+  `maybeAdvanceLiveDate()` in `app.js`, called from each clock tick and
+  from any time-override / "now" button change so the rollover doesn't
+  lag a tick.
 
 ---
 
@@ -268,7 +269,7 @@ Hebcal's Hebrew rendering uses geresh (U+05F3, ׳) and gershayim (U+05F4,
 ״) for abbreviations. `stripNiqqud` rewrites both to ASCII apostrophe
 and double quote — the board displays straight quotes everywhere
 ("חנוכה ז'", "ראש השנה א'", "תשפ"ה", "ט"ו"), and the day-of-month / year
-gematria in `app.js` outputs the same ASCII forms.
+gematria in `core.js` outputs the same ASCII forms.
 
 ---
 
