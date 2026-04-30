@@ -255,15 +255,14 @@ main {
 }
 
 .cell.flipping .flap {
-  animation: fold-down 450ms ease-in forwards;
+  animation: fold-down 3000ms ease-in forwards;
+  will-change: transform;
 }
 
 @keyframes fold-down {
-  /* Flap (showing old char) squishes down toward the centre line,
-     revealing the new char on the top half behind it. scaleY avoids
-     any perspective/containment-context rendering issues. */
-  0%   { transform: scaleY(1); }
-  100% { transform: scaleY(0); }
+  0%   { transform: scaleY(1);    filter: brightness(1.4); }
+  40%  { transform: scaleY(0.5);  filter: brightness(1.2); }
+  100% { transform: scaleY(0.05); filter: brightness(1.0); }
 }
 
 /* ─── Controls ───────────────────────────────────────────────── */

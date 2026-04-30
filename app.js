@@ -185,7 +185,7 @@
     el.appendChild(bottom);
     el.appendChild(flap);
 
-    return { el, topSpan, bottomSpan, flap, flapSpan, current: ' ', timer: null };
+    return { el, topSpan, bottomSpan, flap, flapSpan, current: ' ', timer: null, flipTimer: null };
   }
 
   function setCellChar(cell, char) {
@@ -195,34 +195,37 @@
     cell.flapSpan.textContent = char;
   }
 
+  const FLIP_DURATION_MS = 3000;
+
   function flipCellTo(cell, target) {
     if (cell.current === target) return;
     if (prefersReducedMotion) {
       setCellChar(cell, target);
       return;
     }
-    // Flap keeps showing the OLD char (already set via setCellChar).
-    // Pre-load the new char on the top half behind the flap — it will be
-    // revealed as the flap folds forward toward the viewer and disappears.
+    // Flap keeps the OLD char; new char is pre-loaded on the top half
+    // behind it and revealed as the flap squishes away.
     cell.topSpan.textContent = target;
+
+    // Reset animation cleanly: remove class, force reflow, re-add.
+    cell.el.classList.remove('flipping');
     void cell.el.offsetWidth;
     cell.el.classList.add('flipping');
 
-    let done = false;
-    const commit = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(fallback);
+    // Commit via timer only — animationend is unreliable in some browsers.
+    clearTimeout(cell.flipTimer);
+    cell.flipTimer = setTimeout(() => {
       cell.el.classList.remove('flipping');
-      cell.flap.removeEventListener('animationend', commit);
       setCellChar(cell, target);
-    };
-    // Fallback so the cell always commits even if animationend never fires.
-    const fallback = setTimeout(commit, 520);
-    cell.flap.addEventListener('animationend', commit);
+      cell.flipTimer = null;
+    }, FLIP_DURATION_MS + 50);
   }
 
   function clearCellTimer(cell) {
+    if (cell.flipTimer !== null) {
+      clearTimeout(cell.flipTimer);
+      cell.flipTimer = null;
+    }
     if (cell.timer !== null) {
       clearTimeout(cell.timer);
       clearInterval(cell.timer);
