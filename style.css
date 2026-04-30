@@ -84,13 +84,42 @@ main {
     0 2px 4px rgba(0,0,0,0.2);
   overflow: hidden;
   margin-bottom: 1.5rem;
+  /* Sized container so the smaller header flaps below can be expressed
+     as a fraction of the frame's content width via cqw. */
+  container-type: inline-size;
 }
 
-/* The first board-row is the brass-plate header (date + time). It uses
-   the exact same flap cells as the body rows; the only difference is a
-   little extra space below to separate it from the message. */
-.board-row.board-header-row {
-  margin-bottom: calc(var(--cell-gap) * 2);
+/* Brass-plate header: two side-by-side panels (date right, time left)
+   with smaller flap cells than the body so they read as a subordinate
+   row above the message. justify-content: space-between with dir="rtl"
+   on the parent puts the DOM-first child (date) at the visual right. */
+.board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--cell-gap);
+  margin-bottom: calc(var(--cell-gap) * 3);
+  padding: 0 0.15rem;
+}
+
+.board-header .header-section {
+  display: flex;
+  gap: var(--cell-gap);
+}
+
+/* Time digits read left-to-right even though the rest of the frame is
+   RTL — without this override "14:30" comes out as "03:41". */
+.board-header .header-time {
+  direction: ltr;
+}
+
+/* Smaller header cells: ~55 % of body-cell width, capped so they don't
+   bloom on huge displays. cqw resolves against the .display-frame
+   container declared above. */
+.board-header .cell {
+  flex: 0 0 auto;
+  width: clamp(20px, 5cqw, 56px);
+  min-width: 0;
 }
 
 .board {

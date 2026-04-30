@@ -83,49 +83,56 @@
   let headerTimeCells = [];
   let headerDateCells = [];
 
-  // Builds the brass-plate header row and returns { rowEl, allCells }
-  // where allCells is in DOM order (visual right → left) so the cascade
-  // can schedule them like any body row.
+  // Builds the brass-plate header — two side-by-side panels (Hebrew
+  // date on the visual right, HH:MM time on the visual left) sized
+  // smaller than the body cells so they read as a subordinate row.
+  // Returns { headerEl, allCells } where allCells is in scheduling
+  // order so the cascade can stagger them like any body row.
   function buildHeaderRow() {
     const now = new Date();
     const dateChars = Array.from(formatHebrewDate(now));
     const timeChars = Array.from(TIME_FMT.format(now));
-    const padCount = MAX_COLS - dateChars.length - timeChars.length;
 
-    const rowEl = document.createElement('div');
-    rowEl.className = 'board-row board-header-row';
+    const headerEl = document.createElement('div');
+    headerEl.className = 'board-header';
     const allCells = [];
 
-    // DOM order in an RTL board: first appended → visual right.
-    // Initialise every header cell to space and stash its true target on
-    // `_target`; the cycle phase will land on the time/date chars.
+    // Date panel — inherits dir="rtl" from the board, so DOM-first cell
+    // sits at the visual right of the section, matching Hebrew reading.
+    const dateSection = document.createElement('div');
+    dateSection.className = 'header-section header-date';
     headerDateCells = [];
     for (const ch of dateChars) {
       const cell = createCell();
       setCellChar(cell, ' ');
       cell._target = ch;
-      rowEl.appendChild(cell.el);
+      dateSection.appendChild(cell.el);
       headerDateCells.push(cell);
       allCells.push(cell);
     }
-    for (let i = 0; i < padCount; i += 1) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ' ';
-      rowEl.appendChild(cell.el);
-      allCells.push(cell);
-    }
+
+    // Time panel — explicit dir="ltr" so the digits read 14:30, not
+    // 03:41. Inside an RTL board this override is required.
+    const timeSection = document.createElement('div');
+    timeSection.className = 'header-section header-time';
+    timeSection.setAttribute('dir', 'ltr');
     headerTimeCells = [];
     for (const ch of timeChars) {
       const cell = createCell();
       setCellChar(cell, ' ');
       cell._target = ch;
-      rowEl.appendChild(cell.el);
+      timeSection.appendChild(cell.el);
       headerTimeCells.push(cell);
       allCells.push(cell);
     }
 
-    return { rowEl, allCells };
+    // RTL flex on the parent: first child sits at the visual right
+    // (date), second at the visual left (time). justify-content:
+    // space-between in the CSS pushes the gap into the middle.
+    headerEl.appendChild(dateSection);
+    headerEl.appendChild(timeSection);
+
+    return { headerEl, allCells };
   }
 
   function updateClock() {
@@ -261,10 +268,11 @@
     board.innerHTML = '';
     cells.length = 0;
 
-    // Header row (clock + Hebrew date) — same flap cells as the body
-    // rows, prepended so it sits above the message inside the frame.
+    // Header (clock + Hebrew date) — prepended inside the board so it
+    // shares the frame, but laid out as two smaller panels rather than
+    // a full-width row of same-sized flaps.
     const header = buildHeaderRow();
-    board.appendChild(header.rowEl);
+    board.appendChild(header.headerEl);
     cells.push(header.allCells);
 
     // Always pad body rows to MAX_COLS so every row — including the
@@ -279,22 +287,11 @@
       const rowCells = [];
 
       // Every row has exactly `cols` cells so flex sizing yields uniform
-      // cell widths across rows. Padding is split around the chars to
-      // visually centre each line; for odd totals the extra cell goes to
-      // padAfter (visual left = end of line in RTL).
-      // Board has dir="rtl" so the first appended cell sits on the right;
-      // chars are appended in logical order (char[0] → visually rightmost).
-      const padTotal = cols - rowChars.length;
-      const padBefore = Math.floor(padTotal / 2);
-      const padAfter = padTotal - padBefore;
-      const appendPad = () => {
-        const cell = createCell();
-        setCellChar(cell, ' ');
-        cell._target = ' ';
-        rowEl.appendChild(cell.el);
-        rowCells.push(cell);
-      };
-      for (let i = 0; i < padBefore; i += 1) appendPad();
+      // cell widths across rows. Hebrew is RTL — chars start at the
+      // visual right and any unused trailing cells fall on the visual
+      // left. Board has dir="rtl" so the DOM-first cell is at the right;
+      // append chars in logical order, then padding cells.
+      const padCount = cols - rowChars.length;
       for (let i = 0; i < rowChars.length; i += 1) {
         const cell = createCell();
         setCellChar(cell, ' ');
@@ -302,7 +299,13 @@
         rowEl.appendChild(cell.el);
         rowCells.push(cell);
       }
-      for (let i = 0; i < padAfter; i += 1) appendPad();
+      for (let i = 0; i < padCount; i += 1) {
+        const cell = createCell();
+        setCellChar(cell, ' ');
+        cell._target = ' ';
+        rowEl.appendChild(cell.el);
+        rowCells.push(cell);
+      }
 
       cells.push(rowCells);
       board.appendChild(rowEl);
