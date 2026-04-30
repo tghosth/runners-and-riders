@@ -13,8 +13,6 @@
   const MAX_CYCLES = 14;
   const MAX_COLS = 13;
 
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
   const board = document.getElementById('board');
   const messageInput = document.getElementById('message');
   const setBtn = document.getElementById('set-btn');
@@ -195,14 +193,10 @@
     cell.flapSpan.textContent = char;
   }
 
-  const FLIP_DURATION_MS = 3000;
+  const FLIP_DURATION_MS = 450;
 
   function flipCellTo(cell, target) {
     if (cell.current === target) return;
-    if (prefersReducedMotion) {
-      setCellChar(cell, target);
-      return;
-    }
     // Flap keeps the OLD char; new char is pre-loaded on the top half
     // behind it and revealed as the flap squishes away.
     cell.topSpan.textContent = target;
@@ -235,14 +229,6 @@
 
   function scheduleCellAnimation(cell, target, startDelay) {
     clearCellTimer(cell);
-
-    if (prefersReducedMotion) {
-      cell.timer = setTimeout(() => {
-        setCellChar(cell, target);
-        cell.timer = null;
-      }, startDelay);
-      return;
-    }
 
     const totalCycles = Math.floor(MIN_CYCLES + Math.random() * (MAX_CYCLES - MIN_CYCLES));
 
