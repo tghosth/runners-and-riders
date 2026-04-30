@@ -86,6 +86,13 @@ main {
   margin-bottom: 1.5rem;
 }
 
+/* The first board-row is the brass-plate header (date + time). It uses
+   the exact same flap cells as the body rows; the only difference is a
+   little extra space below to separate it from the message. */
+.board-row.board-header-row {
+  margin-bottom: calc(var(--cell-gap) * 2);
+}
+
 .board {
   display: flex;
   flex-direction: column;
