@@ -913,8 +913,17 @@
   function clearTimeOverride() {
     timeOverride = null;
     if (timeInput) timeInput.value = fmtTimeForInput(new Date());
+    // "Return to now" should also restore the *date* — re-enter live
+    // mode so the board snaps back to today's effective Hebrew day
+    // (and resumes auto-advancing at tzeit).
+    liveDateMode = true;
+    const eff = getEffectiveTodayJs(getDisplayedTime());
+    if (eff.getTime() !== selectedDate.getTime()) {
+      syncGregSelectors(eff);
+      syncGregToHebrew(eff);
+      renderForDate(eff);
+    }
     updateClock();
-    maybeAdvanceLiveDate();
   }
 
   if (timeInput) {
@@ -931,6 +940,22 @@
     });
   }
   if (timeNowBtn) timeNowBtn.addEventListener('click', clearTimeOverride);
+
+  // ─── Date stepper ───────────────────────────────────────────────
+  // ◀ / ▶ buttons that nudge the displayed date by one civil day.
+  // Uses setDateFromGreg, so they also flip liveDateMode off — the
+  // user is explicitly browsing a chosen date, no longer tracking
+  // today. "חזרה לעכשיו" puts them back into live mode.
+  function stepDate(deltaDays) {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + deltaDays);
+    syncGregSelectors(next);
+    setDateFromGreg(next);
+  }
+  const datePrevBtn = document.getElementById('date-prev');
+  const dateNextBtn = document.getElementById('date-next');
+  if (datePrevBtn) datePrevBtn.addEventListener('click', () => stepDate(-1));
+  if (dateNextBtn) dateNextBtn.addEventListener('click', () => stepDate(+1));
 
   // Build SHA — replaced by the deploy workflow
   const buildShaEl = document.getElementById('build-sha');

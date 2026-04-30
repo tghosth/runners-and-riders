@@ -235,6 +235,30 @@ console.log('\n── Liturgy.getDayInfo (modern holiday allowlist)');
   }
 }
 
+// Fast days — minor (Tzom Gedaliah, Asara B'Tevet, Ta'anit Esther,
+// 17 Tammuz, Ta'anit Bechorot) and major (Tisha B'Av). Yom Kippur is
+// already handled by the CHAG branch as a row-1 holidayName, so we
+// don't expect it as a separate fastDay value.
+console.log('\n── Liturgy.getDayInfo (fast days)');
+{
+  const FAST_CASES = [
+    ['Tzom Gedaliah',     new Date(2025, 8, 25),  'צום גדליה'],
+    ['Asara B\'Tevet',    new Date(2025, 11, 30), 'עשרה בטבת'],
+    ['Ta\'anit Esther',   new Date(2026, 2, 2),   'תענית אסתר'],
+    ['Tzom Tammuz (17)',  new Date(2025, 6, 13),  'צום י״ז בתמוז'],
+    ['Tish\'a B\'Av',     new Date(2025, 7, 3),   'תשעה באב'],
+    ['Ta\'anit Bechorot', new Date(2026, 3, 1),   'תענית בכורות'],
+  ];
+  for (const [label, d, expected] of FAST_CASES) {
+    eq(`${label}: fastDay`, Liturgy.getDayInfo(d).fastDay, expected);
+  }
+  // Yom Kippur — not surfaced as fastDay (already shown as holidayName)
+  eq('Yom Kippur: not on fastDay (handled by CHAG)',
+    Liturgy.getDayInfo(new Date(2025, 9, 2)).fastDay, '');
+  // Regular weekday: no fast
+  eq('Regular Tue: no fast', Liturgy.getDayInfo(new Date(2026, 0, 6)).fastDay, '');
+}
+
 console.log('\n── Liturgy.getDayInfo (Rosh Chodesh)');
 const ROSH_CASES = [
   ['1 Iyar 5786',  new Date(2026, 3, 18), true],  // Sat 18 Apr 2026

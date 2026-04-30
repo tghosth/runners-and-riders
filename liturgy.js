@@ -44,6 +44,8 @@
     'Sukkot VII (Hoshana Raba)': 'הושענא רבה',
     // Adar I in a leap year — minor commemoration.
     'Shushan Purim Katan':       'ש״פ קטן',
+    // Tisha B'Av deferred to Sunday when 9 Av falls on Shabbat.
+    'Tish\'a B\'Av (observed)':  'תשעה באב נדחה',
   };
 
   // Israel observances we *want* on the board. Hebcal's MODERN_HOLIDAY
@@ -142,7 +144,7 @@
                   :  renderHe(cholHamoed));
       return {
         holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false,
-        roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
+        fastDay: '', roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
       };
     }
 
@@ -156,7 +158,7 @@
       }
       return {
         holidayName: name, yaalehVeYavo: true, specialDay: '', alHaNisim: false,
-        roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
+        fastDay: '', roshChodesh: false, specialShabbat: '', shabbatMevarchim: false,
       };
     }
 
@@ -186,11 +188,20 @@
 
     const shabbatMevarchim = events.some(e => !!(getFlags(e) & FLAG_SHABBAT_MEVARCHIM));
 
+    // Fasts — minor (Tzom Gedaliah, Asara B'Tevet, Ta'anit Esther, 17
+    // Tammuz, Ta'anit Bechorot) and major (Tisha B'Av). Yom Kippur is
+    // also a major fast but already returned early via the CHAG branch
+    // above. Hebcal's stock Hebrew labels all fit the 13-cell limit.
+    const FAST_FLAGS = HEBCAL_FLAGS.MAJOR_FAST | HEBCAL_FLAGS.MINOR_FAST;
+    const fastEv = events.find(e => !!(getFlags(e) & FAST_FLAGS));
+    const fastDay = fastEv ? (overrideLabel(fastEv) || renderHe(fastEv)) : '';
+
     return {
       holidayName: '',
       yaalehVeYavo: roshChodesh,
       specialDay,
       alHaNisim,
+      fastDay,
       roshChodesh,
       specialShabbat,
       shabbatMevarchim,
@@ -341,7 +352,7 @@
     const hDay = hd.getDate();
     const info = getDayInfo(jsDate);
     const {
-      holidayName, yaalehVeYavo, specialDay, alHaNisim,
+      holidayName, yaalehVeYavo, specialDay, alHaNisim, fastDay,
       roshChodesh, specialShabbat, shabbatMevarchim,
     } = info;
     const row1 = holidayName || getParshaForDate(jsDate);
@@ -351,6 +362,7 @@
     const rows = [row1];
     if (specialShabbat)    rows.push(specialShabbat);
     if (shabbatMevarchim)  rows.push('שבת מברכים');
+    if (fastDay)           rows.push(fastDay);
     if (specialDay)        rows.push(specialDay);
     if (roshChodesh)       rows.push('ראש חודש');
     if (yaalehVeYavo)      rows.push('יעלה ויבוא');
