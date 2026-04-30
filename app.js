@@ -83,7 +83,13 @@
   // date go on the visual right, and any leftover cells become padding
   // in the middle. With dir="rtl" on the board the DOM-first child
   // sits at the RTL start = visual right.
-  const TIME_COLS = SHOW_SECONDS ? 8 : 5;
+  // The time block is always 8 flap cells wide (HH:MM:SS-shaped),
+  // regardless of whether ?seconds is on. With seconds the cells show
+  // "HH:MM:SS"; without, the first 5 show "HH:MM" and the remaining
+  // 3 are blank flaps. Keeping the section width fixed means the rest
+  // of the header layout (dow section width, brass gap, total tile
+  // count) doesn't shift between modes.
+  const TIME_COLS = 8;
 
   // Both header rows are 18 cell-widths across so the top (date) and
   // bottom (dow / brass / time) line up tile-for-tile. 18 is wide
@@ -296,6 +302,8 @@
     }
 
     // timeSection: dir="ltr" so HH:MM (or HH:MM:SS) renders forwards.
+    // Always TIME_COLS = 8 cells wide; trailing cells past the formatted
+    // time (when ?seconds is off) get blank flap padding.
     const timeSection = document.createElement('div');
     timeSection.className = 'header-section header-time';
     timeSection.setAttribute('dir', 'ltr');
@@ -304,6 +312,9 @@
     for (const ch of timeChars) {
       const cell = appendCell(timeSection, ch, TIME_CHAR_SET, [headerTimeCells, allCells]);
       if (ch === ':') cell._static = true;
+    }
+    for (let i = timeChars.length; i < TIME_COLS; i += 1) {
+      appendCell(timeSection, ' ', TIME_CHAR_SET, [headerTimeCells, allCells]);
     }
 
     // DOM order: dow → notile → time. With dir="rtl" inherited on
@@ -373,11 +384,13 @@
     const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
     const dateChars = Array.from(formatHebrewDate(selectedDate));
     const dowChars  = Array.from(dowText(selectedDate));
-    // Pad date and dow to their respective full widths so cells past
-    // the new date's length settle to a literal ' ' (rather than
-    // keeping whatever char was there from the previous date).
+    // Pad date / dow / time to their respective full widths so cells
+    // past the formatted content settle to a literal ' ' (rather than
+    // keeping whatever char was there before). Only matters for time
+    // when ?seconds is off (the trailing 3 cells stay blank).
     while (dateChars.length < HEADER_COLS)     dateChars.push(' ');
     while (dowChars.length  < DOW_TOTAL_COLS)  dowChars.push(' ');
+    while (timeChars.length < TIME_COLS)       timeChars.push(' ');
 
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;
