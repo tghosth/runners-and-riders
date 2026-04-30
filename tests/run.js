@@ -133,6 +133,48 @@ for (const [label, d, expected] of SHABBAT_CASES) {
   eq(`${label}: shabbatMevarchim`, info.shabbatMevarchim, expected.shabbatMevarchim);
 }
 
+// The body grid pads to 7 rows on quiet days. The maximum *non-empty*
+// row count is also 7 — Chanukah days that coincide with R"Ch Tevet
+// fill every slot (parsha / Chanukah / ראש חודש / יעלה ויבוא / tal /
+// dew / על הנסים). Sat 20 Dec 2025 = Chanukah day 7 + R"Ch Tevet on
+// Shabbat is a known-good real-calendar date for this. If a future
+// liturgy change ever pushes the body past 7 rows, this test catches
+// the overflow before it surprises the user.
+console.log('\n── Liturgy.getDisplayText (max-row coincidence: Chanukah + R"Ch Tevet)');
+{
+  const d = new Date(2025, 11, 20);  // Sat 20 Dec 2025
+  const rows = Liturgy.getDisplayText(d).split('\n');
+  const nonEmpty = rows.filter(Boolean);
+  eq('non-empty rows', nonEmpty.length, 7);
+  eq('total rows (padded to 7)', rows.length, 7);
+  // Spot-check the row identities so we notice silent reorderings
+  check('parsha row',     nonEmpty[0] === 'מקץ',
+    `got ${JSON.stringify(nonEmpty[0])}`);
+  check('Chanukah row',   /חנוכה/.test(nonEmpty[1]),
+    `got ${JSON.stringify(nonEmpty[1])}`);
+  eq('Rosh Chodesh row',  nonEmpty[2], 'ראש חודש');
+  eq('יעלה ויבוא row',     nonEmpty[3], 'יעלה ויבוא');
+  eq('tal row',           nonEmpty[4], 'תן טל ומטר');
+  eq('geshem row',        nonEmpty[5], 'מוריד הגשם');
+  eq('al hanisim row',    nonEmpty[6], 'אל הניסים');
+}
+
+// Sweep the next 16 years and confirm no day produces more than 7
+// non-empty body rows — currently the layout assumes ≤7 explicit
+// content rows (anything past that would push the sefira footer
+// against the body cells without breathing room).
+console.log('\n── Liturgy.getDisplayText (no day exceeds 7 non-empty body rows, 2024–2040)');
+{
+  let worst = 0, worstDate = null;
+  const start = new Date(2024, 0, 1), end = new Date(2040, 11, 31);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const n = Liturgy.getDisplayText(d).split('\n').filter(Boolean).length;
+    if (n > worst) { worst = n; worstDate = new Date(d); }
+  }
+  check('≤7 non-empty rows on any day in 2024–2040', worst <= 7,
+    `worst: ${worst} rows on ${worstDate && worstDate.toDateString()}`);
+}
+
 console.log('\n── Liturgy.getDayInfo (Rosh Chodesh)');
 const ROSH_CASES = [
   ['1 Iyar 5786',  new Date(2026, 3, 18), true],  // Sat 18 Apr 2026
