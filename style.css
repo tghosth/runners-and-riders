@@ -185,7 +185,7 @@ main {
 .cell .half.top {
   top: 0;
   border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(0,0,0,0.15);
   background-image:
     linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
     var(--stone-texture);
@@ -208,7 +208,7 @@ main {
     0 0,
     calc(var(--bg-x, 0%) + 37%) calc(var(--bg-y, 0%) + 53%);
   align-items: flex-start;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,0.25);
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.10);
 }
 
 .cell .half.bottom span {
@@ -229,7 +229,7 @@ main {
   background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
   background-repeat: no-repeat, repeat;
   border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.4);
+  border-bottom: 1px solid rgba(0,0,0,0.15);
   display: flex;
   align-items: flex-end;
   justify-content: center;
