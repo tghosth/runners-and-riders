@@ -296,7 +296,7 @@
     if (roshChodesh)       rows.push('ראש חודש');
     if (yaalehVeYavo)      rows.push('יעלה ויבוא');
     rows.push(talRow, geshem);
-    if (alHaNisim)         rows.push('אל הניסים');
+    if (alHaNisim)         rows.push('על הניסים');
     while (rows.length < 7) rows.push('');
     return rows.join('\n');
   }
