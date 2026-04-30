@@ -15,7 +15,7 @@
   // and the per-cell flip count); > 10 → slower (e.g. 20 doubles).
   // The per-flap CSS animation (FLIP_DURATION_MS, 80 ms) stays
   // constant either way so individual tile turns always feel snappy.
-  const FLICKER_SCALE = 10;
+  const FLICKER_SCALE = 7.5;
   const STAGGER_MS = Math.round(300 * FLICKER_SCALE / 10);
   const MIN_CYCLES = Math.max(1, Math.round(10 * FLICKER_SCALE / 10));
   const MAX_CYCLES = Math.max(MIN_CYCLES, Math.round(22 * FLICKER_SCALE / 10));
