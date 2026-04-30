@@ -42,8 +42,11 @@
   const HOLIDAY_OVERRIDES = {
     // Day 7 of Sukkot Chol HaMoed — its own well-known name.
     'Sukkot VII (Hoshana Raba)': 'הושענא רבה',
-    // Adar I in a leap year — minor commemoration.
-    'Shushan Purim Katan':       'ש״פ קטן',
+    // Adar I in a leap year — minor commemoration. The full
+    // "שושן פורים קטן" is 14 chars (one over the row width); we
+    // shorten שושן → שו׳ rather than abbreviating פורים, which the
+    // ש״פ contraction would have hidden.
+    'Shushan Purim Katan':       'שו׳ פורים קטן',
     // Tisha B'Av deferred to Sunday when 9 Av falls on Shabbat.
     'Tish\'a B\'Av (observed)':  'תשעה באב נדחה',
   };

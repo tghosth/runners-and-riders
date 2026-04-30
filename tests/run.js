@@ -257,6 +257,19 @@ console.log('\n── Liturgy.getDayInfo (fast days)');
     Liturgy.getDayInfo(new Date(2025, 9, 2)).fastDay, '');
   // Regular weekday: no fast
   eq('Regular Tue: no fast', Liturgy.getDayInfo(new Date(2026, 0, 6)).fastDay, '');
+  // Deferred Tisha B'Av (when 9 Av is Shabbat) gets the נדחה label
+  eq('Tisha B\'Av deferred (Sun 22 Jul 2029)',
+    Liturgy.getDayInfo(new Date(2029, 6, 22)).fastDay, 'תשעה באב נדחה');
+}
+
+// Shushan Purim Katan only happens in Adar I of leap years (so once
+// every 2–3 years). Pin the override so the spell-out-purim choice
+// stays committed to.
+console.log('\n── Liturgy.getDayInfo (Shushan Purim Katan)');
+{
+  // Sat 24 Feb 2024 = 15 Adar I 5784 = Shushan Purim Katan
+  const d = new Date(2024, 1, 24);
+  eq('Sat 24 Feb 2024: specialDay', Liturgy.getDayInfo(d).specialDay, 'שו׳ פורים קטן');
 }
 
 console.log('\n── Liturgy.getDayInfo (Rosh Chodesh)');
