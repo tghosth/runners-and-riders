@@ -84,7 +84,19 @@
   // in the middle. With dir="rtl" on the board the DOM-first child
   // sits at the RTL start = visual right.
   const TIME_COLS = SHOW_SECONDS ? 8 : 5;
-  const DATE_COLS = 14;
+
+  // Both header rows are padded to exactly HEADER_COLS flap cells, so
+  // the date row (top) and the dow + time row (bottom) line up tile-
+  // for-tile. 16 is wide enough for the longest possible date string
+  // (e.g. "י\"א אדר א' תשפ\"ד" — 16 chars in an Adar I leap year),
+  // so the date never has to drop its gershayim or get truncated.
+  const HEADER_COLS = 16;
+  // Cells of brass-plate space we leave between the dow label and the
+  // time block on the bottom row. Always ≥ 1, so there's at least one
+  // empty tile separating them — even with ?seconds (8 time cells +
+  // 7 dow cells + 1 spacer = 16). On the default no-seconds run that
+  // resolves to 4 spacer cells.
+  const HEADER_GAP_COLS = Math.max(1, HEADER_COLS - 7 /* DOW_COLS */ - TIME_COLS);
 
   // Day-of-week labels: יום א' through יום ו' (5 chars each) and the
   // longer יום שבת on Saturday (7 chars). The DOW section is sized to
@@ -179,18 +191,16 @@
     return str.slice(0, -1) + '"' + str.slice(-1);
   }
 
-  // Format the Hebrew date as `[day-gematria] [month] [year]`. Tries to fit
-  // DATE_COLS characters: first with marks, then marks stripped, then truncated.
+  // Format the Hebrew date as `[day-gematria] [month] [year]`. The
+  // longest possible string is 16 chars (an Adar I leap-year date),
+  // which fits HEADER_COLS exactly — no trimming or strip-marks
+  // fallback needed.
   function formatHebrewDate(date) {
     const hd = new HDate(date);
     const dayInt = hd.getDate();
     const hYear = hd.getFullYear();
     const month = hebrewMonthName(hd.getMonth(), hebrewIsLeapYear(hYear));
-    let str = `${dayGematria(dayInt, true)} ${month} ${yearGematria(hYear, true)}`;
-    if (Array.from(str).length <= DATE_COLS) return str;
-    str = str.replace(/['"]/g, '');
-    if (Array.from(str).length <= DATE_COLS) return str;
-    return Array.from(str).slice(0, DATE_COLS).join('');
+    return `${dayGematria(dayInt, true)} ${month} ${yearGematria(hYear, true)}`;
   }
 
   // The currently-displayed date. Header date reflects this; header time
@@ -203,11 +213,28 @@
   let headerDateCells = [];
   let headerDowCells  = [];
 
-  // Builds the brass-plate header. The .board-header is now a flex
-  // column with two rows: the Hebrew date stands alone on top, and
-  // a "bottom" row carries the day-of-week (visual right) plus the
-  // wall-clock time (visual left). Returns { headerEl, allCells }
-  // where allCells is in scheduling order for the cascade.
+  // Helper: append a flap cell to `parent` and register it on `regs`.
+  // If `target` is a single char from `charSet` it animates as that;
+  // if it's a literal blank space the cycle phase still runs (but
+  // lands on ' '), giving the padding cells a brief flicker that
+  // matches the rest of the row instead of staying static.
+  function appendCell(parent, target, charSet, regs) {
+    const cell = createCell();
+    setCellChar(cell, ' ');
+    cell._target = target;
+    cell._charSet = charSet;
+    parent.appendChild(cell.el);
+    for (const reg of regs) reg.push(cell);
+    return cell;
+  }
+
+  // Builds the brass-plate header. .board-header is a flex column with
+  // two rows: the Hebrew date alone on top, and a bottom row carrying
+  // the day-of-week (visual right), spacer cells, and the wall-clock
+  // time (visual left). Both rows are padded to exactly HEADER_COLS
+  // flap cells so they line up tile-for-tile, and the bottom row
+  // always has at least HEADER_GAP_COLS empty cells separating dow
+  // from time. Returns { headerEl, allCells } in cascade order.
   function buildHeaderRow(forDate) {
     const dateChars = Array.from(formatHebrewDate(forDate));
     const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
@@ -217,67 +244,59 @@
     headerEl.className = 'board-header';
     const allCells = [];
 
-    // ── Top row: Hebrew date alone (RTL flex-start = visual right)
+    // ── Top row: Hebrew date — chars first (visual right), blank
+    // padding cells after to fill HEADER_COLS.
     const dateSection = document.createElement('div');
     dateSection.className = 'header-section header-date';
     headerDateCells = [];
     for (const ch of dateChars) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ch;
-      cell._charSet = HEBREW_CHAR_SET;
-      dateSection.appendChild(cell.el);
-      headerDateCells.push(cell);
-      allCells.push(cell);
+      appendCell(dateSection, ch, HEBREW_CHAR_SET, [headerDateCells, allCells]);
+    }
+    for (let i = dateChars.length; i < HEADER_COLS; i += 1) {
+      appendCell(dateSection, ' ', HEBREW_CHAR_SET, [headerDateCells, allCells]);
     }
 
-    // ── Bottom row: day-of-week (right) + time (left)
+    // ── Bottom row: dow (right) + spacer + time (left)
     const bottomRow = document.createElement('div');
     bottomRow.className = 'header-bottom-row';
 
-    // dowSection: DOW_COLS cells (= longest "יום שבת"). DOM-first =
-    // visual right in RTL; chars first, blank padding after for
-    // shorter weekday labels.
+    // dowSection: DOW_COLS cells. Chars first (visual right), blank
+    // padding cells after for shorter weekday labels.
     const dowSection = document.createElement('div');
     dowSection.className = 'header-section header-dow';
     headerDowCells = [];
     for (const ch of dowChars) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ch;
-      cell._charSet = HEBREW_CHAR_SET;
-      dowSection.appendChild(cell.el);
-      headerDowCells.push(cell);
-      allCells.push(cell);
+      appendCell(dowSection, ch, HEBREW_CHAR_SET, [headerDowCells, allCells]);
     }
     for (let i = dowChars.length; i < DOW_COLS; i += 1) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ' ';
-      cell._charSet = HEBREW_CHAR_SET;
-      dowSection.appendChild(cell.el);
-      headerDowCells.push(cell);
-      allCells.push(cell);
+      appendCell(dowSection, ' ', HEBREW_CHAR_SET, [headerDowCells, allCells]);
     }
 
+    // Spacer: a short run of blank cells between dow and time. Same
+    // visual gap (var(--cell-gap)) on either side as the cells inside
+    // the sections, so the row reads as one continuous strip of HEADER_COLS
+    // flaps with the central few left empty.
+    const spacerSection = document.createElement('div');
+    spacerSection.className = 'header-section header-spacer';
+    for (let i = 0; i < HEADER_GAP_COLS; i += 1) {
+      appendCell(spacerSection, ' ', HEBREW_CHAR_SET, [allCells]);
+    }
+
+    // timeSection: dir="ltr" so HH:MM (or HH:MM:SS) renders forwards.
     const timeSection = document.createElement('div');
     timeSection.className = 'header-section header-time';
     timeSection.setAttribute('dir', 'ltr');
     headerTimeCells = [];
     for (const ch of timeChars) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ch;
-      cell._charSet = TIME_CHAR_SET;
+      const cell = appendCell(timeSection, ch, TIME_CHAR_SET, [headerTimeCells, allCells]);
       if (ch === ':') cell._static = true;
-      timeSection.appendChild(cell.el);
-      headerTimeCells.push(cell);
-      allCells.push(cell);
     }
 
-    // dowSection first → visual right; timeSection second → visual
-    // left (justify-content: space-between separates them).
+    // DOM order: dow → spacer → time. With dir="rtl" inherited on
+    // bottomRow, that puts dow on the visual right and time on the
+    // visual left, with the spacer between them.
     bottomRow.appendChild(dowSection);
+    bottomRow.appendChild(spacerSection);
     bottomRow.appendChild(timeSection);
 
     headerEl.appendChild(dateSection);
@@ -340,9 +359,11 @@
     const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
     const dateChars = Array.from(formatHebrewDate(selectedDate));
     const dowChars  = Array.from(dowText(selectedDate));
-    // Pad dow to its full width with trailing blanks so the empty
-    // cells on shorter weekdays settle to ' '.
-    while (dowChars.length < DOW_COLS) dowChars.push(' ');
+    // Pad date and dow to their respective full widths so cells past
+    // the new date's length settle to a literal ' ' (rather than
+    // keeping whatever char was there from the previous date).
+    while (dateChars.length < HEADER_COLS) dateChars.push(' ');
+    while (dowChars.length  < DOW_COLS)    dowChars.push(' ');
 
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;

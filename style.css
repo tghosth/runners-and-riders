@@ -85,11 +85,13 @@ main {
   min-width: 0;
 }
 
+/* Bottom row reads as one continuous strip of HEADER_COLS flaps —
+   sections are siblings with the same cell-gap as cells inside each
+   section, so the dow + spacer + time tiles look uniform. */
 .board-header .header-bottom-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: min(56px, 5cqw);
+  gap: var(--cell-gap);
   min-width: 0;
 }
 
