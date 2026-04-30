@@ -201,6 +201,40 @@ console.log('\n── Liturgy.getDisplayText (every body row ≤ 13 chars, 2024�
       : null);
 }
 
+// Modern Israeli observances are deliberately *filtered* — only the
+// four national days + Sigd surface. Every other MODERN_HOLIDAY (Family
+// Day, Herzl Day, Jabotinsky Day, Hebrew Language Day, Ben-Gurion Day,
+// Rabin Memorial Day, Yom HaAliyah, Yom HaAliyah School Observance,
+// Rosh Hashana LaBehemot) must NOT show up as a board row. Pinning the
+// keep-list and the drop-list separately so a future Hebcal addition
+// can't silently flip back on.
+console.log('\n── Liturgy.getDayInfo (modern holiday allowlist)');
+{
+  const KEEP = [
+    ['Yom HaShoah',       new Date(2025, 3, 24), 'יום השואה'],
+    ['Yom HaZikaron',     new Date(2025, 3, 30), 'יום הזכרון'],
+    ["Yom HaAtzma'ut",    new Date(2025, 4,  1), 'יום העצמאות'],
+    ['Yom Yerushalayim',  new Date(2025, 4, 26), 'יום ירושלים'],
+    ['Sigd',              new Date(2025, 10, 20), 'חג הסיגד'],
+  ];
+  for (const [label, d, expected] of KEEP) {
+    eq(`${label}: shown`, Liturgy.getDayInfo(d).specialDay, expected);
+  }
+  const DROP = [
+    ['Family Day',                    new Date(2024, 1, 9)],
+    ['Herzl Day',                     new Date(2024, 4, 19)],
+    ['Jabotinsky Day',                new Date(2024, 7, 4)],
+    ['Hebrew Language Day',           new Date(2024, 0, 2)],
+    ['Ben-Gurion Day',                new Date(2024, 11, 8)],
+    ['Yitzhak Rabin Memorial Day',    new Date(2024, 10, 13)],
+    ['Yom HaAliyah',                  new Date(2024, 3, 18)],
+    ['Yom HaAliyah School Observance',new Date(2024, 10, 8)],
+  ];
+  for (const [label, d] of DROP) {
+    eq(`${label}: hidden`, Liturgy.getDayInfo(d).specialDay, '');
+  }
+}
+
 console.log('\n── Liturgy.getDayInfo (Rosh Chodesh)');
 const ROSH_CASES = [
   ['1 Iyar 5786',  new Date(2026, 3, 18), true],  // Sat 18 Apr 2026

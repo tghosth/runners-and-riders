@@ -42,15 +42,25 @@
   const HOLIDAY_OVERRIDES = {
     // Day 7 of Sukkot Chol HaMoed — its own well-known name.
     'Sukkot VII (Hoshana Raba)': 'הושענא רבה',
-    // Modern Israeli observances whose Hebrew rendering overflows.
-    'Hebrew Language Day':            'יום השפה',
-    'Jabotinsky Day':                 'ז׳בוטינסקי',
-    'Rosh Hashana LaBehemot':         'ר״ה לבהמה',
-    'Yitzhak Rabin Memorial Day':     'יום רבין',
-    'Yom HaAliyah School Observance': 'יום העליה',
     // Adar I in a leap year — minor commemoration.
-    'Shushan Purim Katan':            'ש״פ קטן',
+    'Shushan Purim Katan':       'ש״פ קטן',
   };
+
+  // Israel observances we *want* on the board. Hebcal's MODERN_HOLIDAY
+  // flag covers ~13 civic days; the user has explicitly opted in to
+  // these five (the four national days + Sigd) and out of the rest
+  // (Family Day, Herzl Day, Jabotinsky Day, Hebrew Language Day,
+  // Ben-Gurion Day, Rabin Memorial Day, Yom HaAliyah, Yom HaAliyah
+  // School Observance, Rosh Hashana LaBehemot). To bring one back,
+  // add its English desc here — overrides for previously-truncated
+  // labels are kept in HOLIDAY_OVERRIDES_DROPPED below for reference.
+  const KEPT_MODERN_HOLIDAYS = new Set([
+    'Yom HaShoah',
+    'Yom HaZikaron',
+    "Yom HaAtzma'ut",
+    'Yom Yerushalayim',
+    'Sigd',
+  ]);
 
   // Hebcal renders Chanukah days as "חנוכה: X׳ נרות" — the colon and
   // נרות push days 2–8 to 14 chars, over the row width. We compress to
@@ -159,7 +169,8 @@
                        (/chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e)))) ||
       events.find(e => /chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e)));
 
-    const modernEv = events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.MODERN_HOLIDAY));
+    const modernEv = events.find(e =>
+      (getFlags(e) & HEBCAL_FLAGS.MODERN_HOLIDAY) && KEPT_MODERN_HOLIDAYS.has(getDesc(e)));
 
     const specialEv = chanukahOrPurim || modernEv;
     const specialDay = specialEv ? (overrideLabel(specialEv) || renderHe(specialEv)) : '';
