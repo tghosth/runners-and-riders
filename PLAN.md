@@ -196,6 +196,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 
 - **Uniform rows + flex-fill cells; no horizontal scroll.** Brought padding cells back so every row has the same flap count (= longest-line length, capped at 13) and switched cell sizing to `flex: 1 1 0` + `aspect-ratio: 3 / 4`. The board's row is `width: 100%`, so cells share the available frame width equally and the entire board scales to fit the viewport on any screen. Removed the `--cells-across` / `--cell-w` / `--cell-h` clamp plumbing — no longer needed. Font size now scales with each cell via `container-type: inline-size` + `font-size: 93cqi`. `.display-frame { overflow: hidden }` so nothing scrolls left/right. Padding within rows is split around the chars (`padBefore` / `padAfter`) so each line is visually centred.
 
+- **Clock + Hebrew date header; default 7-line message.** Added a brass-toned `.board-header` inside `.display-frame` above the flaps. The 24-hour Asia/Jerusalem time sits on the visual left and the Hebrew calendar date (locale `he-IL-u-ca-hebrew-nu-hebr`) on the visual right via `flex` + `justify-content: space-between`. `updateClock()` formats both with `Intl.DateTimeFormat` and re-ticks aligned to the next minute boundary so the time stays in sync with wall-clock minutes. Default textarea content extended from 4 to 7 sample lines (`rows="7"`).
+
 ---
 
 ## Out of Scope (v1)

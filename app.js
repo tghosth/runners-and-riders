@@ -18,6 +18,32 @@
   const board = document.getElementById('board');
   const messageInput = document.getElementById('message');
   const setBtn = document.getElementById('set-btn');
+  const timeEl = document.getElementById('board-time');
+  const dateEl = document.getElementById('board-date');
+
+  // 24-hour Jerusalem time. en-GB gives "HH:MM" with leading zeros.
+  const TIME_FMT = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Jerusalem',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  // Hebrew calendar date in Hebrew, e.g. "י״ג בְּאִיָּר תשפ״ו". The
+  // `nu-hebr` numbering tag asks for gematria; browsers without it
+  // render "13 באייר 5786", which is still readable.
+  const DATE_FMT = new Intl.DateTimeFormat('he-IL-u-ca-hebrew-nu-hebr', {
+    timeZone: 'Asia/Jerusalem',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  function updateClock() {
+    const now = new Date();
+    if (timeEl) timeEl.textContent = TIME_FMT.format(now);
+    if (dateEl) dateEl.textContent = DATE_FMT.format(now);
+  }
 
   /**
    * Each cell is { el, topSpan, bottomSpan, flapSpan, current, timer }.
@@ -225,4 +251,13 @@
 
   // Initial render with default message
   renderMessage(messageInput.value);
+
+  // Start the brass-plate clock and re-tick on the next minute boundary
+  // so the displayed time changes in sync with real wall-clock minutes.
+  updateClock();
+  const msToNextMinute = 60_000 - (Date.now() % 60_000);
+  setTimeout(() => {
+    updateClock();
+    setInterval(updateClock, 60_000);
+  }, msToNextMinute);
 })();
