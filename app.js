@@ -9,10 +9,10 @@
   const HEBREW_CHAR_SET = HEBREW_LETTERS.split('');
   const TIME_CHAR_SET = (DIGITS + ':').split('');
 
-  const STAGGER_MS = 120;
+  const STAGGER_MS = 300;
   const CYCLE_INTERVAL_MS = 60;
-  const MIN_CYCLES = 6;
-  const MAX_CYCLES = 14;
+  const MIN_CYCLES = 10;
+  const MAX_CYCLES = 22;
   const MAX_COLS = 13;
 
   const board = document.getElementById('board');
@@ -123,6 +123,7 @@
       setCellChar(cell, ' ');
       cell._target = ch;
       cell._charSet = TIME_CHAR_SET;
+      if (ch === ':') cell._static = true;
       timeSection.appendChild(cell.el);
       headerTimeCells.push(cell);
       allCells.push(cell);
@@ -233,6 +234,11 @@
 
   function scheduleCellAnimation(cell, target, startDelay) {
     clearCellTimer(cell);
+
+    if (cell._static) {
+      cell.timer = setTimeout(() => { setCellChar(cell, target); cell.timer = null; }, startDelay);
+      return;
+    }
 
     const totalCycles = Math.floor(MIN_CYCLES + Math.random() * (MAX_CYCLES - MIN_CYCLES));
 
