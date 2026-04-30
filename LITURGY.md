@@ -1,172 +1,288 @@
 # Liturgical Display Logic
 
-This document records the exact halachic rules used to decide what text
-appears on each row of the board. All rules apply to **Israel** only.
+This document records the exact rules used to decide what text appears on
+the board for a given date. All rules apply to **Israel** only.
+
+The display has three regions:
+
+```
+┌─────────────────────────────────────────────────┐
+│  Hebrew date  ↔  ↔  ↔  ↔  HH:MM        ← header │
+├─────────────────────────────────────────────────┤
+│  ↑                                              │
+│  │  body rows (1–7+, padded to 7 minimum)       │
+│  │                                              │
+│  ↓                                              │
+├─────────────────────────────────────────────────┤
+│  Sefirat HaOmer  (smaller flap cells, 1–3 lines │
+│   stacked on a "footer" panel; only during omer)│
+└─────────────────────────────────────────────────┘
+```
+
+Each body row is a 13-cell flap row. Anything longer than 13 characters
+must be overridden — `tests/run.js` walks every day from 2024 through 2030
+and asserts no row overflows.
 
 ---
 
-## Row 1 — פרשת השבוע / חג (Holiday or Weekly Torah Portion)
+## Body row order
 
-Row 1 shows a holiday name when one exists for the selected date, otherwise
-the weekly Torah portion for that Shabbat.
+Specials stack above the weekly parsha so the visual hierarchy reads
+"what's notable about today" first:
+
+| # | Row | Always shown? | Source |
+|---|-----|---------------|--------|
+| 1 | Special Shabbat (פרשת שקלים / זכור / פרה / החודש / שבת הגדול) | only on those Shabbatot | Hebcal `SPECIAL_SHABBAT` events, mapped to "פרשת ..." labels we own |
+| 2 | שבת מברכים | only on the Shabbat preceding Rosh Chodesh (except Tishrei) | Hebcal `SHABBAT_MEVARCHIM` flag (option `shabbatMevarchim: true`) |
+| 3 | specialDay (Chanukah / Purim / kept modern / kept minor) | only when the day matches an allowlisted event | see [Special days](#special-days) |
+| 4 | fastDay (צום גדליה / עשרה בטבת / תענית אסתר / צום י"ז בתמוז / תשעה באב / תענית בכורות) | only on those fasts | Hebcal `MAJOR_FAST` ∪ `MINOR_FAST`, EREV excluded |
+| 5 | ראש חודש | only on Rosh Chodesh | Hebcal `ROSH_CHODESH` flag |
+| 6 | **Holiday name OR weekly parsha** | always | see [Row 6 — holiday or parsha](#row-6--holiday-or-parsha) |
+| 7 | יעלה ויבוא | only on R"Ch / Yom Tov / Chol HaMoed | derived from steps above |
+| 8 | על הניסים | only on Chanukah / Purim | derived from specialDay being Chanukah or Purim |
+| 9 | תן טל ומטר / תן ברכה | always | see [Tal/matar](#-tn-tl-vmtr--tn-brkh) |
+| 10 | מוריד הגשם / מוריד הטל | always | see [Geshem/tal](#-mvryd-hgshm--mvryd-htl) |
+
+The body is padded to **at least 7 rows**; rows 1–5 and 7–8 only appear
+when the condition is true. The rare "Chanukah day 7 + Rosh Chodesh
+Tevet on Shabbat" coincidence (e.g. Sat 20 Dec 2025) fills all 7 with
+real content; that's the maximum, locked in by a regression test.
+
+---
+
+## Row 6 — Holiday or parsha
+
+Row 6 shows a holiday name when one exists for the date, otherwise the
+weekly Torah portion for the upcoming Shabbat.
 
 ### Holiday display
 
-**Algorithm:**
-
-1. Call `HebrewCalendar.calendar({ start, end, il: true })` for the date.
-2. If any event has the `CHOL_HAMOED` flag → show a fixed Hebrew string:
-   - `חול המועד פסח` (13 chars) or `ח המועד סוכות` (13 chars)
-3. Else if any event has the `CHAG` flag (major Yom Tov) → show
-   `e.render('he')` with niqqud stripped.
-4. If neither → fall through to the parsha logic below.
+1. Call `HebrewCalendar.calendar({ start, end, il: true, shabbatMevarchim: true })`
+   for the date.
+2. If any event has the `CHOL_HAMOED` flag → fixed Hebrew string:
+   - `חול המועד פסח` (12 chars)
+   - `ח המועד סוכות` (13 chars; abbreviates "חול" because the full form
+     overflows)
+   - `הושענא רבה` (10 chars; the 7th day of Sukkot Chol HaMoed has its
+     own well-known name and gets it via `HOLIDAY_OVERRIDES`)
+3. Else if any event has the `CHAG` flag (major Yom Tov) → `e.render('he')`
+   with niqqud stripped. Special case: Rosh Hashana day 1 comes back as
+   "ראש השנה 5787" — overridden to "ראש השנה א'" for symmetry with day 2.
+4. Else → fall through to the parsha logic below.
 
 ### Parsha fallback
 
-**Source:** `@hebcal/core` v6 (`HebrewCalendar.calendar` with `il: true`).
-
-**Algorithm:**
+Source: `@hebcal/core` v6 (`HebrewCalendar.calendar` with `il: true`).
 
 1. Find the Shabbat of the week: if the selected date is not Saturday,
    advance to the next Saturday.
-2. Call `HebrewCalendar.calendar({ start, end, sedrot: true, il: true })`
-   for that Shabbat.
+2. Call `HebrewCalendar.calendar({ start, end, sedrot: true, il: true })`.
 3. Find the event whose English rendering starts with `"Parashat"`.
 4. Strip niqqud (Unicode range U+0591–U+05C7) and the `פרשת ` / `Parashat `
-   prefix from the Hebrew rendering to get a bare name that fits the 13-cell
-   display.
+   prefix to get a bare name that fits the 13-cell row.
 
-**Why `il: true`:**  
-Israel follows a different parsha schedule than the diaspora on years
-where a holiday falls on a weekday. For example, in some years Israel
-reads פרשת אחרי מות and פרשת קדושים on separate Shabbatot while the
-diaspora reads them together. The `il` flag selects the Israel schedule.
+**Why `il: true`:** Israel and the diaspora can be on different parsha
+schedules in years where a Yom Tov falls on a weekday (e.g. Israel reads
+אחרי מות and קדושים separately while the diaspora combines them).
 
 **Edge cases:**
 
-- On Shabbat Chol HaMoed or Yom Tov, the holiday display fires first
-  (steps 2–3 above), so the parsha fallback is not reached.
 - On a non-holiday day whose upcoming Shabbat has no regular reading
-  (e.g. mid-week during Chol HaMoed), the parsha algorithm advances
-  week by week (up to 5 attempts) until it finds a Shabbat with a
-  regular parsha. The display always shows the next parsha that will
-  be read, never a blank.
-- The combined parsha `אחרי מות-קדושים` is 15 chars (over the 13-cell
-  limit). The `PARSHA_OVERRIDES` map in `app.js` substitutes
-  `אחרי מ-קדושים` (13 chars).
+  (e.g. mid-week during Chol HaMoed), the parsha algorithm advances week
+  by week (up to 5 attempts) until it finds a Shabbat with a regular
+  parsha.
+- `PARSHA_OVERRIDES` substitutes `אחרי מות־קדשים` (14 chars) → `אחרי מ־קדושים`
+  (13 chars). Hebcal renders the combined parsha with a maqaf (U+05BE).
 
 ---
 
-## Row 2 (conditional) — יעלה ויבוא
+## Special days (row 3)
 
-**Context:** An insertion in the Amida (ברכת עבודה / רצה) and in Birkat
-HaMazon on days with a special mussaf or holiday character.
+Anything that fills the "specialDay" slot, in priority order:
 
-**When it is said:**
+1. **Chanukah / Purim**, matched by the regex `/chanukah/i` ∨ `/\bpurim\b/i`
+   on the English render, with `EREV` and `CHANUKAH_CANDLES` events
+   excluded. Members:
+   - חנוכה א' through חנוכה ח' — Chanukah days, compressed from Hebcal's
+     "חנוכה: X' נרות" via `chanukahOverride()` so days 2–8 fit.
+   - פורים, שושן פורים, פורים משולש (3-day Jerusalem Purim), פורים קטן,
+     שו' פורים קטן (15-Adar-I in leap years; full "שושן פורים קטן" is
+     14 chars).
+   - **Erev Purim is excluded** — Hebcal flags it `EREV` so we skip it.
 
-| Occasion | Flag checked |
-|----------|-------------|
-| All major Yom Tov days | `CHAG` |
-| Chol HaMoed Pesach / Sukkot | `CHOL_HAMOED` |
-| Rosh Chodesh | `ROSH_CHODESH` |
+2. **Kept modern observances** (`KEPT_MODERN_HOLIDAYS` allowlist on
+   Hebcal's `MODERN_HOLIDAY` flag): Yom HaShoah, Yom HaZikaron, Yom
+   HaAtzma'ut, Yom Yerushalayim, Sigd. The other ~8 modern Israeli
+   civic days (Family Day, Herzl Day, Jabotinsky Day, Hebrew Language
+   Day, Ben-Gurion Day, Yitzhak Rabin Memorial Day, Yom HaAliyah, Yom
+   HaAliyah School Observance, Rosh Hashana LaBehemot) are intentionally
+   filtered out.
 
-**Display effect:** When יעלה ויבוא is shown it occupies row 2, pushing
-תן טל ומטר and מוריד הגשם to rows 3 and 4. On regular days those rows
-stay at 2 and 3.
+3. **Kept minor observances** (`KEPT_MINOR_HOLIDAYS` allowlist on
+   Hebcal's `MINOR_HOLIDAY` flag): Lag BaOmer, Tu BiShvat. Other minor
+   days (Tu B'Av, Pesach Sheni, Leil Selichot, Chag HaBanot) are
+   filtered out.
+
+`specialDay` carries the first match through `overrideLabel(ev)` — which
+checks `chanukahOverride()` then `HOLIDAY_OVERRIDES` — falling back to
+Hebcal's stock `e.render('he')`.
+
+על הניסים fires only when `chanukahOrPurim` is set (i.e. on the actual
+Chanukah / Purim days, not on Sigd or Lag BaOmer).
 
 ---
 
-## Row 2 or 3 — תן טל ומטר / תן ברכה
+## Fast days (row 4)
 
-**Context:** The 9th blessing of the Amida (ברכת השנים). In the summer
-formula the blessing ends "ותן ברכה"; in the winter formula it includes
-the request for rain "ותן טל ומטר לברכה".
+Source: Hebcal events with `MAJOR_FAST` ∪ `MINOR_FAST` flags, **EREV
+excluded** (Hebcal also flags Erev Tisha B'Av with `MAJOR_FAST` — that's
+the eve, not the fast).
 
-**Source:** Shulchan Aruch Orach Chaim 117:1.
+| Hebrew date | Display |
+|------|---------|
+| 3 Tishrei | צום גדליה |
+| 10 Tevet | עשרה בטבת |
+| 13 Adar (or Adar II in leap years) | תענית אסתר |
+| 17 Tammuz | צום י"ז בתמוז |
+| 9 Av (or 10 Av if 9 Av is Shabbat) | תשעה באב |
+| 14 Nisan (Erev Pesach) | תענית בכורות |
 
-**Israel rule:**
+Yom Kippur is also a major fast but already returned early via the CHAG
+branch as a row-6 holiday — it does not surface again as fastDay.
+
+The deferred Tisha B'Av (`Tish'a B'Av (observed)`, when 9 Av falls on
+Shabbat) shares the same "תשעה באב" label as the regular fast — same
+string year-to-year, no נדחה suffix.
+
+---
+
+## Tal/matar — תן טל ומטר vs תן ברכה (row 9)
+
+Context: the 9th blessing of the Amida (ברכת השנים). Winter formula
+includes the request for rain ("ותן טל ומטר לברכה"); summer formula
+ends "ותן ברכה".
+
+Source: Shulchan Aruch Orach Chaim 117:1.
+
+Israel rule:
 
 | Period | Text |
 |--------|------|
-| 7 Marcheshvan (month 8, day 7) → 14 Nisan (month 1, day 14) | **תן טל ומטר** |
-| 15 Nisan → 6 Marcheshvan (rest of year) | **תן ברכה** |
+| 7 Marcheshvan → 14 Nisan | **תן טל ומטר** |
+| 15 Nisan → 6 Marcheshvan | **תן ברכה** |
 
-**Why 7 Marcheshvan:**  
-The early rain (יורה) is expected to have fallen in the Land of Israel
-by then, so asking for rain becomes seasonally appropriate
-(SA OC 117:1 and the Gemara Taanit 10a).
+The actual halachic switch occurs at Musaf of 15 Nisan (first day of
+Pesach). The display treats the entire day of 15 Nisan as summer formula
+— at Shacharit on 15 Nisan the board is technically one half-day early.
 
-**Transition on 15 Nisan (first day of Pesach):**  
-The actual switch occurs at Musaf (the additional service). Shacharit of
-15 Nisan still says "תן טל ומטר". The display treats the **entire day of
-15 Nisan as the first day of ברכה** (i.e. `hDay >= 15` in Nisan → ברכה).
-This is a deliberate simplification; if you are davening Shacharit on
-15 Nisan the board is technically one half-day early.
-
-**Implementation (Hebrew month numbers use Nisan = 1):**
+Implementation (Hebrew month numbers: Nisan = 1):
 
 ```
 isTalUMatar(hMonth, hDay):
   month 8,  day ≥ 7   → true   (7+ Marcheshvan)
-  month 9–13           → true   (Kislev – Adar / Adar II)
+  month 9–13          → true   (Kislev – Adar / Adar II)
   month 1,  day ≤ 14  → true   (1–14 Nisan)
-  otherwise            → false
+  otherwise           → false
 ```
 
-**Leap year:** In a leap year Adar is split into Adar I (month 12) and
-Adar II (month 13). Both fall within the rain period, so the formula
-handles them automatically (`hMonth >= 9 && hMonth <= 13`).
+Leap year: in a leap year Adar splits into Adar I (month 12) and Adar II
+(month 13). Both fall within the rain period.
 
 ---
 
-## Row 3 or 4 — מוריד הגשם / מוריד הטל
+## Geshem/tal — מוריד הגשם vs מוריד הטל (row 10)
 
-**Context:** The second blessing of the Amida (גבורות / מחיה המתים).
-In winter: "מוריד הגשם" (He who makes rain fall). In summer: "מוריד הטל"
-(He who makes dew fall) or, in many Ashkenazi customs, the phrase is
-simply omitted — but this display shows the positive summer phrase.
+Context: the second blessing of the Amida (גבורות). Winter: "מוריד הגשם"
+(He who makes rain fall). Summer: "מוריד הטל" — many Ashkenazi siddurim
+omit it entirely; this display shows the positive summer phrase.
 
-**Source:** Shulchan Aruch Orach Chaim 114:1–3.
+Source: Shulchan Aruch Orach Chaim 114:1–3.
 
-**Israel rule:**
+Israel rule:
 
 | Period | Text |
 |--------|------|
-| 22 Tishrei (Shemini Atzeret, month 7, day 22) → 14 Nisan | **מוריד הגשם** |
-| 15 Nisan → 21 Tishrei (rest of year) | **מוריד הטל** |
+| 22 Tishrei → 14 Nisan | **מוריד הגשם** |
+| 15 Nisan → 21 Tishrei | **מוריד הטל** |
 
-**Why 22 Tishrei:**  
-Shemini Atzeret in Israel is a single day (22 Tishrei). In the diaspora
-it is 23 Tishrei (the 8th day of Sukkot). The display uses the Israel date.
-
-**Transition on 22 Tishrei:**  
-The switch begins at Musaf of Shemini Atzeret. The display treats the
-**entire day of 22 Tishrei as the first day of גשם**. Shacharit of 22
-Tishrei technically still says "מוריד הטל"; the board is one half-day
-early on that morning.
-
-**Transition on 15 Nisan:**  
-Same approximation as for Row 2 — entire day treated as summer formula.
-
-**Implementation:**
+The switch begins at Musaf of Shemini Atzeret (22 Tishrei in Israel,
+which is a single-day chag here — the diaspora's 23 Tishrei is not
+relevant). Same half-day approximation as for tal/matar applies on the
+boundary days.
 
 ```
 isMoridHaGeshem(hMonth, hDay):
   month 7,  day ≥ 22  → true   (22+ Tishrei / Shemini Atzeret)
-  month 8–13           → true   (Marcheshvan – Adar / Adar II)
+  month 8–13          → true   (Marcheshvan – Adar / Adar II)
   month 1,  day ≤ 14  → true   (1–14 Nisan)
-  otherwise            → false
+  otherwise           → false
 ```
+
+---
+
+## Sefirat HaOmer footer
+
+A separate panel below the body, with smaller flap cells. Active 16
+Nisan through 5 Sivan (49 days). The **full Ashkenazi text** ("היום …
+לעומר") is balanced into 1–3 lines (`splitBalancedLines` picks the
+smallest line count whose longest line fits ≤20 chars). All days fit;
+day 1 is one line, day 7 is two, longer counts spread to three.
+
+Grammatical detail: masculine cardinals are tabulated in two forms:
+
+- **Construct** (`שני`, `שלשה`, `חמשה`, `ששה`, …) — directly before a
+  noun: "שני ימים", "שני שבועות".
+- **Absolute** (`שנים`, `שלשה`, …) — in compound numbers: "שנים עשר",
+  "שנים ועשרים".
+
+Only "שני / שנים" actually differs between the two; the others coincide.
+`omerDayPhrase(n)` and `omerWeekPhrase(weeks, days)` use the right form
+for each construction; `omerFullText(n)` joins them with the standard
+"שהם" connector.
+
+Spelling follows the *ktiv chaser* of Ashkenazi siddurim: שלשה (not
+שלושה), חמשה (not חמישה), ששה (not שישה), שלשים (not שלושים).
+
+---
+
+## Date rollover
+
+The board's "today" rolls over at **tzeit hakochavim in Modi'in** (sun
+8.5° below the horizon — the Geonim convention) instead of at civil
+midnight. Implementation lives in `app.js`, not in this file:
+
+- `tzeitForLocalDate(y, m, d)` constructs a Hebcal `Zmanim` against a
+  hardcoded GeoLocation (lat 31.8924° N, lon 35.0103° E, elevation
+  290 m, tz Asia/Jerusalem) and returns `z.tzeit(8.5)`.
+- `getEffectiveTodayJs(realNow)` shifts to the next civil date once the
+  wall clock has crossed today's tzeit.
+- `liveDateMode` (true until the user explicitly picks a date) drives
+  `maybeAdvanceLiveDate()`, called from each clock tick and from any
+  time-override / "now" button change so the rollover doesn't lag a tick.
+
+---
+
+## Quote normalization
+
+Hebcal's Hebrew rendering uses geresh (U+05F3, ׳) and gershayim (U+05F4,
+״) for abbreviations. `stripNiqqud` rewrites both to ASCII apostrophe
+and double quote — the board displays straight quotes everywhere
+("חנוכה ז'", "ראש השנה א'", "תשפ"ה", "ט"ו"), and the day-of-month / year
+gematria in `app.js` outputs the same ASCII forms.
 
 ---
 
 ## Library
 
-All Hebrew-date arithmetic (Gregorian→Hebrew conversion, month numbering,
-leap-year detection) is handled by **`@hebcal/core` v6.3.3** bundled at
-`vendor/hebcal-core.min.js`. The library is loaded as a UMD script and
-exposes `window.hebcal`. No network requests are made at runtime.
+All Hebrew-date arithmetic (Gregorian↔Hebrew conversion, month
+numbering, leap-year detection, Zmanim) is handled by **`@hebcal/core`
+v6.3.3** at `vendor/hebcal-core.min.js`. The bundle uses
+`Temporal.PlainDate` internally; since Temporal isn't yet a browser
+global, the FullCalendar **`temporal-polyfill`** (`vendor/temporal-polyfill.min.js`,
+~57 KB minified) is loaded first to install `Temporal` on `globalThis`.
+Both files ship as part of the static page — no network requests at
+runtime.
 
-Month numbering used throughout: Nisan = 1, Iyyar = 2 … Elul = 6,
-Tishrei = 7, Marcheshvan = 8, Kislev = 9, Tevet = 10, Shvat = 11,
-Adar = 12, Adar II = 13 (leap years only).
+Month numbering: Nisan = 1, Iyyar = 2 … Elul = 6, Tishrei = 7,
+Marcheshvan = 8, Kislev = 9, Tevet = 10, Shvat = 11, Adar = 12, Adar II
+= 13 (leap years only).

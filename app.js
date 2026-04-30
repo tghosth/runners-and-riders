@@ -115,14 +115,13 @@
     return new Date(timeOverride.anchorClock + (Date.now() - timeOverride.anchorReal));
   }
 
-  // Hebrew month-name formatter (long form). We use Intl for the month
-  // string but compute the day in gematria ourselves below — `nu-hebr`
-  // is unevenly supported across browsers/runtimes.
-  const HEBREW_MONTH_FMT = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', {
-    timeZone: 'Asia/Jerusalem',
-    day: 'numeric',
-    month: 'long',
-  });
+  // We used to format the header's Hebrew month name via
+  //   new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { month: 'long' })
+  // but the Academy-of-Hebrew spelling that comes out (סיוון, חשוון)
+  // didn't match the single-vav spellings the date-picker uses (סיון,
+  // חשון), and didn't match traditional siddurim. The header now reads
+  // its month name from `hebrewMonthName()` below, sharing one source
+  // of truth between the picker and the board.
 
   // Shared gematria letter tables
   const G_ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
@@ -167,10 +166,10 @@
   // Format the Hebrew date as `[day-gematria] [month] [year]`. Tries to fit
   // DATE_COLS characters: first with marks, then marks stripped, then truncated.
   function formatHebrewDate(date) {
-    const parts = HEBREW_MONTH_FMT.formatToParts(date);
-    const dayInt = parseInt(parts.find((p) => p.type === 'day').value, 10);
-    const month = parts.find((p) => p.type === 'month').value;
-    const hYear = new HDate(date).getFullYear();
+    const hd = new HDate(date);
+    const dayInt = hd.getDate();
+    const hYear = hd.getFullYear();
+    const month = hebrewMonthName(hd.getMonth(), hebrewIsLeapYear(hYear));
     let str = `${dayGematria(dayInt, true)} ${month} ${yearGematria(hYear, true)}`;
     if (Array.from(str).length <= DATE_COLS) return str;
     str = str.replace(/['"]/g, '');

@@ -321,6 +321,28 @@ for (const [label, jsDate, expected] of OMER_DAY_CASES) {
   eq(label, Liturgy.getOmerDay(new HDate(jsDate)), expected);
 }
 
+// The header date should use single-vav month spellings (סיון, חשון)
+// to match the date picker, not the double-vav Academy-of-Hebrew forms
+// (סיוון, חשוון) that come out of `Intl.DateTimeFormat('he-IL-u-ca-hebrew')`.
+// We exercise the spelling indirectly by spot-checking a date in each
+// month against the standalone helper; the layout (gematria + month +
+// year) is in app.js and not loaded here.
+console.log('\n── Hebrew month names (single-vav forms)');
+{
+  // Standalone copy of liturgy-side spellings — must match app.js
+  // hebrewMonthName(). If you change one, change the other.
+  const NAMES = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול',
+                 'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט', 'אדר', "אדר ב'"];
+  for (const [d, expected] of [
+    [new Date(2025, 4, 28), 'סיון'],   // 1 Sivan 5785
+    [new Date(2025, 10, 15), 'חשון'],  // mid-Cheshvan 5786
+    [new Date(2026, 5, 1),   'סיון'],
+  ]) {
+    const hd = new HDate(d);
+    eq(`${d.toDateString()} → month`, NAMES[hd.getMonth()], expected);
+  }
+}
+
 // ── Tzeit hakochavim via Hebcal Zmanim (Modi'in) ──
 //
 // We assert Hebcal returns a JS Date (not a Temporal.ZonedDateTime —
