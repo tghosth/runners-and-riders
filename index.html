@@ -26,6 +26,10 @@
         <select id="heb-day" dir="ltr"></select>
         <select id="heb-month" dir="rtl"></select>
         <select id="heb-year" dir="ltr"></select>
+        <div class="hcal-wrap">
+          <button type="button" id="hcal-toggle" aria-label="פתח לוח חודשי">📅</button>
+          <div id="hcal-popup" class="hcal-popup" hidden></div>
+        </div>
       </div>
     </section>
   </main>
@@ -35,6 +39,7 @@
   </footer>
 
   <script src="vendor/hebcal-core.min.js"></script>
+  <script src="liturgy.js?v=__COMMIT_SHA__"></script>
   <script src="app.js?v=__COMMIT_SHA__"></script>
 </body>
 </html>

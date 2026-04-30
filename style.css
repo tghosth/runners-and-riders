@@ -163,7 +163,7 @@ main {
 .cell .half.top {
   top: 0;
   border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.15);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   background-image:
     linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
     var(--stone-texture);
@@ -207,7 +207,7 @@ main {
   background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
   background-repeat: no-repeat, repeat;
   border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.15);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -297,6 +297,113 @@ main {
 
 .controls button:hover { filter: brightness(1.05); }
 .controls button:active { transform: translateY(1px); }
+
+/* ─── Hebrew calendar popup ─────────────────────────────────── */
+.hcal-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+#hcal-toggle {
+  font-size: 1.2rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--stone-bg);
+  border: 1px solid var(--stone-deep);
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#hcal-toggle:hover { filter: brightness(1.04); }
+#hcal-toggle:focus { outline: 2px solid var(--brass); outline-offset: 1px; }
+
+.hcal-popup {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 100;
+  background: var(--stone-bg);
+  border: 1px solid var(--stone-deep);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(36, 27, 20, 0.25);
+  padding: 0.6rem;
+  min-width: 18rem;
+  direction: rtl;
+}
+
+.hcal-popup[hidden] { display: none; }
+
+.hcal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.hcal-nav button {
+  font-family: 'Frank Ruhl Libre', serif;
+  background: transparent;
+  border: 1px solid var(--stone-deep);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  color: var(--walnut);
+}
+
+.hcal-nav button:hover { background: var(--stone-light); }
+
+.hcal-label {
+  font-weight: 700;
+  color: var(--walnut);
+  font-size: 1.05rem;
+}
+
+.hcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.hcal-dow {
+  text-align: center;
+  font-weight: 700;
+  color: var(--ochre);
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+}
+
+.hcal-day,
+.hcal-pad {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Frank Ruhl Libre', serif;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.hcal-pad { background: transparent; }
+
+.hcal-day {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+
+.hcal-day:hover {
+  background: var(--stone-light);
+  border-color: var(--stone-deep);
+}
+
+.hcal-day.selected {
+  background: var(--ochre);
+  color: var(--stone-bg);
+  border-color: var(--walnut);
+}
 
 .page-footer {
   text-align: center;

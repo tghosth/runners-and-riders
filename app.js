@@ -18,135 +18,8 @@
   // final character immediately. Useful for testing liturgical logic.
   const INSTANT = new URLSearchParams(location.search).has('instant');
 
-  const { HDate, HebrewCalendar, flags: HEBCAL_FLAGS } = window.hebcal;
-
-  // ─── Liturgical logic (see LITURGY.md) ────────────────────────
-
-  // Custom short forms for names that exceed MAX_COLS (13 cells).
-  const PARSHA_OVERRIDES = {
-    'אחרי מות-קדושים': 'אחרי מ-קדושים',
-  };
-
-  // Remove Hebrew niqqud (vowel points + cantillation, U+0591–U+05C7).
-  function stripNiqqud(str) {
-    return str.replace(/[֑-ׇ]/g, '');
-  }
-
-  // Israel: say "תן טל ומטר" from 7 Marcheshvan through 14 Nisan.
-  function isTalUMatar(hMonth, hDay) {
-    if (hMonth === 8 && hDay >= 7) return true;   // 7+ Marcheshvan
-    if (hMonth >= 9 && hMonth <= 13) return true;  // Kislev – Adar(II)
-    if (hMonth === 1 && hDay <= 14) return true;   // 1–14 Nisan
-    return false;
-  }
-
-  // Israel: say "מוריד הגשם" from 22 Tishrei (Shemini Atzeret) through 14 Nisan.
-  function isMoridHaGeshem(hMonth, hDay) {
-    if (hMonth === 7 && hDay >= 22) return true;   // 22+ Tishrei
-    if (hMonth >= 8 && hMonth <= 13) return true;  // Marcheshvan – Adar(II)
-    if (hMonth === 1 && hDay <= 14) return true;   // 1–14 Nisan
-    return false;
-  }
-
-  // Single Hebcal query for jsDate; returns:
-  //   holidayName — non-empty string to show in row 1 instead of the parsha,
-  //                 or '' on a regular weekday/Shabbat.
-  //   yaalehVeYavo — true when יעלה ויבוא is added to the Amida
-  //                  (Yom Tov, Chol HaMoed, Rosh Chodesh).
-  function getDayInfo(jsDate) {
-    const hd = new HDate(jsDate);
-    let events = [];
-    try { events = HebrewCalendar.calendar({ start: hd, end: hd, il: true }) || []; } catch {}
-
-    const getFlags = e => { try { return e.getFlags(); } catch { return 0; } };
-    const renderEn = e => { try { return e.render('en') || ''; } catch { return ''; } };
-    const renderHe = e => stripNiqqud((() => { try { return e.render('he') || ''; } catch { return ''; } })());
-
-    // Chol HaMoed — fixed Hebrew string + יעלה ויבוא
-    const cholHamoed = events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.CHOL_HAMOED));
-    if (cholHamoed) {
-      const en = renderEn(cholHamoed);
-      const name = /pesach|passover/i.test(en) ? 'חול המועד פסח'
-                 : /sukkot/i.test(en)          ? 'ח המועד סוכות'
-                 : renderHe(cholHamoed);
-      return { holidayName: name, yaalehVeYavo: true };
-    }
-
-    // Major Yom Tov — Hebcal Hebrew rendering + יעלה ויבוא
-    const yomTov = events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.CHAG));
-    if (yomTov) return { holidayName: renderHe(yomTov), yaalehVeYavo: true };
-
-    // Rosh Chodesh — no row-1 override, but יעלה ויבוא is said
-    const roshChodesh = !!events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.ROSH_CHODESH));
-
-    // Chanukah / Purim — prefer non-candle events for cleaner Hebrew text
-    const chanukahOrPurim =
-      events.find(e => !(getFlags(e) & HEBCAL_FLAGS.CHANUKAH_CANDLES) &&
-                       (/chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e)))) ||
-      events.find(e => /chanukah/i.test(renderEn(e)) || /\bpurim\b/i.test(renderEn(e)));
-
-    // Israeli modern holidays (Yom HaShoah, Yom HaZikaron, Yom HaAtzmaut, etc.)
-    const modernEv = events.find(e => !!(getFlags(e) & HEBCAL_FLAGS.MODERN_HOLIDAY));
-
-    // specialDay shows below the parsha without displacing it
-    const specialEv = chanukahOrPurim || modernEv;
-    const specialDay = specialEv ? renderHe(specialEv) : '';
-    // אל הניסים on Chanukah and Purim only — not on Israeli national days
-    const alHaNisim = !!chanukahOrPurim;
-
-    return { holidayName: '', yaalehVeYavo: roshChodesh, specialDay, alHaNisim };
-  }
-
-  // Return the next parsha name (Hebrew, no niqqud, no prefix) on or after
-  // the Shabbat of jsDate's week. If that Shabbat has no regular reading
-  // (Yom Tov / Chol HaMoed), advances week by week until one is found.
-  function getParshaForDate(jsDate) {
-    const shabbat = new Date(jsDate);
-    const dow = shabbat.getDay();
-    if (dow !== 6) shabbat.setDate(shabbat.getDate() + (6 - dow));
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const hd = new HDate(shabbat);
-      let events;
-      try {
-        events = HebrewCalendar.calendar({ start: hd, end: hd, sedrot: true, il: true, locale: 'he' });
-      } catch { return ''; }
-      const ev = events.find(e => { try { return e.render('en').startsWith('Parashat'); } catch { return false; } });
-      if (ev) {
-        const title = stripNiqqud((ev.render('he') || ev.render('en')) || '');
-        const bare = title.replace(/^(פרשת|Parashat)\s+/, '');
-        return PARSHA_OVERRIDES[bare] || bare;
-      }
-      shabbat.setDate(shabbat.getDate() + 7);
-    }
-    return '';
-  }
-
-  // Build the display text for a given JS date. Always 7 rows (padded
-  // with blanks) so the grid stays full.
-  //
-  // Row order (rows present only when relevant):
-  //   1. Holiday (Yom Tov / Chol HaMoed) or Parsha
-  //   2. Special day that doesn't displace parsha (Chanukah, Purim, Israeli day)
-  //   2/3. יעלה ויבוא (Yom Tov, Chol HaMoed, Rosh Chodesh)
-  //   3/4. תן טל ומטר / תן ברכה
-  //   4/5. מוריד הגשם / מוריד הטל
-  //   5/6. אל הניסים (Chanukah, Purim)
-  function getDisplayText(jsDate) {
-    const hd = new HDate(jsDate);
-    const hMonth = hd.getMonth();
-    const hDay = hd.getDate();
-    const { holidayName, yaalehVeYavo, specialDay, alHaNisim } = getDayInfo(jsDate);
-    const row1 = holidayName || getParshaForDate(jsDate);
-    const talRow = isTalUMatar(hMonth, hDay) ? 'תן טל ומטר' : 'תן ברכה';
-    const geshem = isMoridHaGeshem(hMonth, hDay) ? 'מוריד הגשם' : 'מוריד הטל';
-    const rows = [row1];
-    if (specialDay) rows.push(specialDay);
-    if (yaalehVeYavo) rows.push('יעלה ויבוא');
-    rows.push(talRow, geshem);
-    if (alHaNisim) rows.push('אל הניסים');
-    while (rows.length < 7) rows.push('');
-    return rows.join('\n');
-  }
+  const { HDate } = window.hebcal;
+  const { getDisplayText } = window.Liturgy;
 
   const board = document.getElementById('board');
 
@@ -228,6 +101,10 @@
     return Array.from(str).slice(0, DATE_COLS).join('');
   }
 
+  // The currently-displayed date. Header date reflects this; header time
+  // always shows the wall clock. Updated by the date pickers.
+  let selectedDate = new Date();
+
   // Header-row cell registries — populated by buildHeaderRow, mutated
   // by updateClock so only the cells whose char actually changed flip.
   let headerTimeCells = [];
@@ -238,17 +115,14 @@
   // smaller than the body cells so they read as a subordinate row.
   // Returns { headerEl, allCells } where allCells is in scheduling
   // order so the cascade can stagger them like any body row.
-  function buildHeaderRow() {
-    const now = new Date();
-    const dateChars = Array.from(formatHebrewDate(now));
-    const timeChars = Array.from(TIME_FMT.format(now));
+  function buildHeaderRow(forDate) {
+    const dateChars = Array.from(formatHebrewDate(forDate));
+    const timeChars = Array.from(TIME_FMT.format(new Date()));
 
     const headerEl = document.createElement('div');
     headerEl.className = 'board-header';
     const allCells = [];
 
-    // Date panel — inherits dir="rtl" from the board, so DOM-first cell
-    // sits at the visual right of the section, matching Hebrew reading.
     const dateSection = document.createElement('div');
     dateSection.className = 'header-section header-date';
     headerDateCells = [];
@@ -262,8 +136,6 @@
       allCells.push(cell);
     }
 
-    // Time panel — explicit dir="ltr" so the digits read 14:30, not
-    // 03:41. Inside an RTL board this override is required.
     const timeSection = document.createElement('div');
     timeSection.className = 'header-section header-time';
     timeSection.setAttribute('dir', 'ltr');
@@ -279,9 +151,6 @@
       allCells.push(cell);
     }
 
-    // RTL flex on the parent: first child sits at the visual right
-    // (date), second at the visual left (time). justify-content:
-    // space-between in the CSS pushes the gap into the middle.
     headerEl.appendChild(dateSection);
     headerEl.appendChild(timeSection);
 
@@ -290,9 +159,8 @@
 
   function updateClock() {
     if (!headerTimeCells.length && !headerDateCells.length) return;
-    const now = new Date();
-    const timeChars = Array.from(TIME_FMT.format(now));
-    const dateChars = Array.from(formatHebrewDate(now));
+    const timeChars = Array.from(TIME_FMT.format(new Date()));
+    const dateChars = Array.from(formatHebrewDate(selectedDate));
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;
       // Cancel any in-progress cycle on this cell so the minute tick
@@ -414,20 +282,14 @@
    * Build (or rebuild) the grid to fit the given lines.
    * Returns a 2D array of cells [row][col] sized to fit.
    */
-  function buildGrid(lines) {
-    // Clear DOM and cell registry
+  function buildGrid(lines, forDate) {
     board.innerHTML = '';
     cells.length = 0;
 
-    // Header (clock + Hebrew date) — prepended inside the board so it
-    // shares the frame, but laid out as two smaller panels rather than
-    // a full-width row of same-sized flaps.
-    const header = buildHeaderRow();
+    const header = buildHeaderRow(forDate);
     board.appendChild(header.headerEl);
     cells.push(header.allCells);
 
-    // Always pad body rows to MAX_COLS so every row — including the
-    // header — has the same flap count and the cells stay uniform width.
     const cols = MAX_COLS;
 
     for (let r = 0; r < lines.length; r += 1) {
@@ -437,11 +299,6 @@
       const rowChars = Array.from(lines[r]);
       const rowCells = [];
 
-      // Every row has exactly `cols` cells so flex sizing yields uniform
-      // cell widths across rows. Hebrew is RTL — chars start at the
-      // visual right and any unused trailing cells fall on the visual
-      // left. Board has dir="rtl" so the DOM-first cell is at the right;
-      // append chars in logical order, then padding cells.
       const padCount = cols - rowChars.length;
       for (let i = 0; i < rowChars.length; i += 1) {
         const cell = createCell();
@@ -467,12 +324,12 @@
     return cells;
   }
 
-  function renderMessage(text) {
+  function renderMessage(text, forDate) {
     const lines = text.split(/\r?\n/).map((l) => {
       const chars = Array.from(l);
       return chars.length > MAX_COLS ? chars.slice(0, MAX_COLS).join('') : l;
     });
-    const grid = buildGrid(lines);
+    const grid = buildGrid(lines, forDate);
 
     for (let r = 0; r < grid.length; r += 1) {
       const rowDelay = r * STAGGER_MS;
@@ -576,14 +433,25 @@
   const hebDaySel   = document.getElementById('heb-day');
 
   function renderForDate(jsDate) {
-    renderMessage(getDisplayText(jsDate));
+    selectedDate = jsDate;
+    renderMessage(getDisplayText(jsDate), jsDate);
+  }
+
+  function setDateFromGreg(jsDate) {
+    syncGregToHebrew(jsDate);
+    renderForDate(jsDate);
+  }
+
+  function setDateFromHebrewSelectors() {
+    const jsDate = hebrewSelectorsToGreg();
+    if (!jsDate) return;
+    dateInput.value = jsDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    renderForDate(jsDate);
   }
 
   dateInput.addEventListener('change', () => {
     const [y, m, d] = dateInput.value.split('-').map(Number);
-    const jsDate = new Date(y, m - 1, d);
-    syncGregToHebrew(jsDate);
-    renderForDate(jsDate);
+    setDateFromGreg(new Date(y, m - 1, d));
   });
 
   hebYearSel.addEventListener('change', () => {
@@ -592,22 +460,112 @@
     populateHebrewMonths(hebMonthSel, year, month);
     const monthNow = parseInt(hebMonthSel.value, 10);
     populateHebrewDays(hebDaySel, monthNow, year, parseInt(hebDaySel.value, 10));
-    const jsDate = hebrewSelectorsToGreg();
-    if (jsDate) { dateInput.value = jsDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); renderForDate(jsDate); }
+    setDateFromHebrewSelectors();
   });
 
   hebMonthSel.addEventListener('change', () => {
     const year  = parseInt(hebYearSel.value, 10);
     const month = parseInt(hebMonthSel.value, 10);
     populateHebrewDays(hebDaySel, month, year, parseInt(hebDaySel.value, 10));
-    const jsDate = hebrewSelectorsToGreg();
-    if (jsDate) { dateInput.value = jsDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); renderForDate(jsDate); }
+    setDateFromHebrewSelectors();
   });
 
-  hebDaySel.addEventListener('change', () => {
-    const jsDate = hebrewSelectorsToGreg();
-    if (jsDate) { dateInput.value = jsDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); renderForDate(jsDate); }
-  });
+  hebDaySel.addEventListener('change', setDateFromHebrewSelectors);
+
+  // ─── Hebrew calendar popup ──────────────────────────────────────
+  // A clickable month grid that mirrors what the native <input type="date">
+  // gives the Gregorian picker. Click a day → updates both pickers + board.
+  const hcalToggle = document.getElementById('hcal-toggle');
+  const hcalPopup  = document.getElementById('hcal-popup');
+
+  // Popup view state — driven independently of the selectors so the user
+  // can browse ahead/behind without committing a date until they click one.
+  let hcalViewYear = 0;
+  let hcalViewMonth = 0;
+
+  function renderHcalPopup() {
+    const year = hcalViewYear;
+    const month = hcalViewMonth;
+    const isLeap = hebrewIsLeapYear(year);
+    const numMonths = isLeap ? 13 : 12;
+    const daysInMonth = hebrewDaysInMonth(month, year);
+
+    // Selected (current) Hebrew date for highlighting
+    const sel = new HDate(selectedDate);
+    const selY = sel.getFullYear(), selM = sel.getMonth(), selD = sel.getDate();
+
+    // Day-of-week of the 1st of this month (0=Sunday … 6=Saturday)
+    const firstDow = new HDate(1, month, year).greg().getDay();
+
+    const monthLabel = `${hebrewMonthName(month, isLeap)} ${yearGematria(year, true)}`;
+
+    // Build header row of weekday letters. Board is RTL so DOM-first is
+    // the visual right; Sunday (יום ראשון) belongs on the right.
+    const dowLetters = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+
+    let html = `
+      <div class="hcal-nav">
+        <button type="button" class="hcal-prev" aria-label="חודש קודם">▶</button>
+        <span class="hcal-label">${monthLabel}</span>
+        <button type="button" class="hcal-next" aria-label="חודש הבא">◀</button>
+      </div>
+      <div class="hcal-grid">
+    `;
+    for (const l of dowLetters) html += `<div class="hcal-dow">${l}</div>`;
+
+    // Pad leading cells before day 1
+    for (let i = 0; i < firstDow; i++) html += `<div class="hcal-pad"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isSel = (year === selY && month === selM && d === selD);
+      html += `<button type="button" class="hcal-day${isSel ? ' selected' : ''}" data-day="${d}">${dayGematria(d, false)}</button>`;
+    }
+    html += `</div>`;
+    hcalPopup.innerHTML = html;
+
+    hcalPopup.querySelector('.hcal-prev').addEventListener('click', () => {
+      let m = month - 1, y = year;
+      if (m < 1) { y -= 1; m = hebrewIsLeapYear(y) ? 13 : 12; }
+      hcalViewYear = y; hcalViewMonth = m;
+      renderHcalPopup();
+    });
+    hcalPopup.querySelector('.hcal-next').addEventListener('click', () => {
+      let m = month + 1, y = year;
+      const max = hebrewIsLeapYear(y) ? 13 : 12;
+      if (m > max) { y += 1; m = 1; }
+      hcalViewYear = y; hcalViewMonth = m;
+      renderHcalPopup();
+    });
+    for (const btn of hcalPopup.querySelectorAll('.hcal-day')) {
+      btn.addEventListener('click', () => {
+        const d = parseInt(btn.dataset.day, 10);
+        const jsDate = new HDate(d, month, year).greg();
+        setDateFromGreg(jsDate);
+        closeHcalPopup();
+      });
+    }
+  }
+
+  function openHcalPopup() {
+    const sel = new HDate(selectedDate);
+    hcalViewYear = sel.getFullYear();
+    hcalViewMonth = sel.getMonth();
+    hcalPopup.hidden = false;
+    renderHcalPopup();
+  }
+
+  function closeHcalPopup() {
+    hcalPopup.hidden = true;
+  }
+
+  if (hcalToggle && hcalPopup) {
+    hcalToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hcalPopup.hidden ? openHcalPopup() : closeHcalPopup();
+    });
+    hcalPopup.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => { if (!hcalPopup.hidden) closeHcalPopup(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !hcalPopup.hidden) closeHcalPopup(); });
+  }
 
   // Build SHA — replaced by the deploy workflow
   const buildShaEl = document.getElementById('build-sha');
