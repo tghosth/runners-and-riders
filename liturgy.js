@@ -295,8 +295,8 @@
     if (specialDay)        rows.push(specialDay);
     if (roshChodesh)       rows.push('ראש חודש');
     if (yaalehVeYavo)      rows.push('יעלה ויבוא');
-    rows.push(talRow, geshem);
     if (alHaNisim)         rows.push('על הניסים');
+    rows.push(talRow, geshem);
     while (rows.length < 7) rows.push('');
     return rows.join('\n');
   }

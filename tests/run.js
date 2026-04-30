@@ -154,9 +154,9 @@ console.log('\n── Liturgy.getDisplayText (max-row coincidence: Chanukah + R"
     `got ${JSON.stringify(nonEmpty[1])}`);
   eq('Rosh Chodesh row',  nonEmpty[2], 'ראש חודש');
   eq('יעלה ויבוא row',     nonEmpty[3], 'יעלה ויבוא');
-  eq('tal row',           nonEmpty[4], 'תן טל ומטר');
-  eq('geshem row',        nonEmpty[5], 'מוריד הגשם');
-  eq('al hanisim row',    nonEmpty[6], 'על הניסים');
+  eq('al hanisim row',    nonEmpty[4], 'על הניסים');
+  eq('tal row',           nonEmpty[5], 'תן טל ומטר');
+  eq('geshem row',        nonEmpty[6], 'מוריד הגשם');
 }
 
 // Sweep the next 16 years and confirm no day produces more than 7
