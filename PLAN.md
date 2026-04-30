@@ -200,6 +200,8 @@ After the initial deploy, two bugs were reported and fixed (PR #3):
 
 - **Header rendered as flap cells.** Replaced the brass-text header with a real `.board-row` of the same flap cells used for the message: 8 cells of Hebrew date on the visual right, 5 cells of `HH:MM` time on the visual left, padding cells in the middle (13 total — same as every body row, so flap sizes stay uniform). `dayGematria()` builds Hebrew day numerals manually (ט״ו / ט״ז for 15 / 16) so the result doesn't depend on `nu-hebr` browser support; `formatHebrewDate()` falls back to mark-stripped or truncated forms only for leap-year Adar A / B and a couple of other dates that exceed 8 chars with full marks. `updateClock` cancels any in-progress cycle on a cell before flipping (so a minute tick mid-cascade doesn't stomp the cycle), and `buildGrid` now always pads body rows to `MAX_COLS = 13` so the header and message rows share identical cell widths regardless of message length.
 
+- **Text info bar; right-aligned body rows.** Replaced the flap-cell header row with a slim `.board-info-bar` text strip above the board: Hebrew date on the visual right, 24-hour time on the visual left, separated by `justify-content: space-between`. The time `<span>` carries `direction: ltr; unicode-bidi: isolate` so "HH:MM" renders in reading order (the old flap-cell approach reversed the digits in the RTL flex layout). Body rows in `buildGrid` now append chars first (visual right = RTL start) then all padding on the visual left, so each line starts flush at the right edge instead of being centred.
+
 ---
 
 ## Out of Scope (v1)

@@ -19,14 +19,6 @@
   const messageInput = document.getElementById('message');
   const setBtn = document.getElementById('set-btn');
 
-  // Header-row layout: 13 cells total. Up to TIME_COLS (5) cells of
-  // "HH:MM" go on the visual left, up to DATE_COLS (8) cells of Hebrew
-  // date go on the visual right, and any leftover cells become padding
-  // in the middle. With dir="rtl" on the board the DOM-first child
-  // sits at the RTL start = visual right.
-  const TIME_COLS = 5;
-  const DATE_COLS = 8;
-
   // Time formatter: 24-hour Asia/Jerusalem, en-GB gives "HH:MM" with
   // leading zeros regardless of the user's locale.
   const TIME_FMT = new Intl.DateTimeFormat('en-GB', {
@@ -61,88 +53,20 @@
       : GEMATRIA_TENS[tens] + GEMATRIA_ONES[ones];
   }
 
-  // Format the Hebrew date as `[day-gematria] [month]`. Drops the year
-  // (the body of the message is the focus, and Hebrew years rarely
-  // change) and tries hardest to fit DATE_COLS cells: full marks, then
-  // marks stripped, then truncated.
+  // Format the Hebrew date as `[day-gematria] [month]`, dropping the year.
   function formatHebrewDate(date) {
     const parts = HEBREW_MONTH_FMT.formatToParts(date);
     const dayInt = parseInt(parts.find((p) => p.type === 'day').value, 10);
     const month = parts.find((p) => p.type === 'month').value;
-    let str = `${dayGematria(dayInt, true)} ${month}`;
-    if (Array.from(str).length <= DATE_COLS) return str;
-    // Strip geresh ׳ and gershayim ״ and try again — typically gets us
-    // under for leap-year Adar ("כ״ט אדר א׳" → "כט אדר א").
-    str = str.replace(/[׳״]/g, '');
-    if (Array.from(str).length <= DATE_COLS) return str;
-    return Array.from(str).slice(0, DATE_COLS).join('');
-  }
-
-  // Header-row cell registries — populated by buildHeaderRow, mutated
-  // by updateClock so only the cells whose char actually changed flip.
-  let headerTimeCells = [];
-  let headerDateCells = [];
-
-  // Builds the brass-plate header row and returns { rowEl, allCells }
-  // where allCells is in DOM order (visual right → left) so the cascade
-  // can schedule them like any body row.
-  function buildHeaderRow() {
-    const now = new Date();
-    const dateChars = Array.from(formatHebrewDate(now));
-    const timeChars = Array.from(TIME_FMT.format(now));
-    const padCount = MAX_COLS - dateChars.length - timeChars.length;
-
-    const rowEl = document.createElement('div');
-    rowEl.className = 'board-row board-header-row';
-    const allCells = [];
-
-    // DOM order in an RTL board: first appended → visual right.
-    // Initialise every header cell to space and stash its true target on
-    // `_target`; the cycle phase will land on the time/date chars.
-    headerDateCells = [];
-    for (const ch of dateChars) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ch;
-      rowEl.appendChild(cell.el);
-      headerDateCells.push(cell);
-      allCells.push(cell);
-    }
-    for (let i = 0; i < padCount; i += 1) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ' ';
-      rowEl.appendChild(cell.el);
-      allCells.push(cell);
-    }
-    headerTimeCells = [];
-    for (const ch of timeChars) {
-      const cell = createCell();
-      setCellChar(cell, ' ');
-      cell._target = ch;
-      rowEl.appendChild(cell.el);
-      headerTimeCells.push(cell);
-      allCells.push(cell);
-    }
-
-    return { rowEl, allCells };
+    return `${dayGematria(dayInt, true)} ${month}`;
   }
 
   function updateClock() {
-    if (!headerTimeCells.length && !headerDateCells.length) return;
     const now = new Date();
-    const timeChars = Array.from(TIME_FMT.format(now));
-    const dateChars = Array.from(formatHebrewDate(now));
-    const updateOne = (cell, ch) => {
-      if (!cell || !ch || cell.current === ch) return;
-      // Cancel any in-progress cycle on this cell so the minute tick
-      // can land cleanly without two animations stomping each other.
-      clearCellTimer(cell);
-      cell._target = ch;
-      flipCellTo(cell, ch);
-    };
-    timeChars.forEach((ch, i) => updateOne(headerTimeCells[i], ch));
-    dateChars.forEach((ch, i) => updateOne(headerDateCells[i], ch));
+    const timeEl = document.getElementById('header-time');
+    const dateEl = document.getElementById('header-date');
+    if (timeEl) timeEl.textContent = TIME_FMT.format(now);
+    if (dateEl) dateEl.textContent = formatHebrewDate(now);
   }
 
   /**
@@ -257,18 +181,9 @@
    * Returns a 2D array of cells [row][col] sized to fit.
    */
   function buildGrid(lines) {
-    // Clear DOM and cell registry
     board.innerHTML = '';
     cells.length = 0;
 
-    // Header row (clock + Hebrew date) — same flap cells as the body
-    // rows, prepended so it sits above the message inside the frame.
-    const header = buildHeaderRow();
-    board.appendChild(header.rowEl);
-    cells.push(header.allCells);
-
-    // Always pad body rows to MAX_COLS so every row — including the
-    // header — has the same flap count and the cells stay uniform width.
     const cols = MAX_COLS;
 
     for (let r = 0; r < lines.length; r += 1) {
@@ -278,15 +193,10 @@
       const rowChars = Array.from(lines[r]);
       const rowCells = [];
 
-      // Every row has exactly `cols` cells so flex sizing yields uniform
-      // cell widths across rows. Padding is split around the chars to
-      // visually centre each line; for odd totals the extra cell goes to
-      // padAfter (visual left = end of line in RTL).
-      // Board has dir="rtl" so the first appended cell sits on the right;
-      // chars are appended in logical order (char[0] → visually rightmost).
+      // Board has dir="rtl" so the first appended cell sits on the visual right.
+      // Chars are appended first (RTL start = visual right), padding fills the
+      // visual left — text always starts from the right edge.
       const padTotal = cols - rowChars.length;
-      const padBefore = Math.floor(padTotal / 2);
-      const padAfter = padTotal - padBefore;
       const appendPad = () => {
         const cell = createCell();
         setCellChar(cell, ' ');
@@ -294,7 +204,6 @@
         rowEl.appendChild(cell.el);
         rowCells.push(cell);
       };
-      for (let i = 0; i < padBefore; i += 1) appendPad();
       for (let i = 0; i < rowChars.length; i += 1) {
         const cell = createCell();
         setCellChar(cell, ' ');
@@ -302,7 +211,7 @@
         rowEl.appendChild(cell.el);
         rowCells.push(cell);
       }
-      for (let i = 0; i < padAfter; i += 1) appendPad();
+      for (let i = 0; i < padTotal; i += 1) appendPad();
 
       cells.push(rowCells);
       board.appendChild(rowEl);
@@ -357,10 +266,8 @@
     }
   }
 
-  // Initial render with default message — the header row's flap cells
-  // already carry the current date/time as their cycle targets, so no
-  // immediate updateClock() is needed.
   renderMessage(messageInput.value);
+  updateClock();
 
   // Re-tick on each wall-clock minute boundary. setTimeout (rescheduled
   // every tick) instead of setInterval keeps us aligned to the real

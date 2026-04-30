@@ -86,11 +86,26 @@ main {
   margin-bottom: 1.5rem;
 }
 
-/* The first board-row is the brass-plate header (date + time). It uses
-   the exact same flap cells as the body rows; the only difference is a
-   little extra space below to separate it from the message. */
-.board-row.board-header-row {
-  margin-bottom: calc(var(--cell-gap) * 2);
+/* Info bar above the flap board: Hebrew date on the visual right,
+   24-hour time on the visual left, separated by flex space-between. */
+.board-info-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 0.2rem 0.55rem;
+  margin-bottom: 0.35rem;
+  font-size: clamp(0.72rem, 1.6vw, 0.95rem);
+  font-weight: 700;
+  color: var(--brass);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgba(156, 127, 74, 0.22);
+}
+
+.header-time-text {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
 }
 
 .board {
