@@ -40,7 +40,7 @@ Specials stack above the weekly parsha so the visual hierarchy reads
 | 6 | **Holiday name OR weekly parsha** | always | see [Row 6 — holiday or parsha](#row-6--holiday-or-parsha) |
 | 7 | יעלה ויבוא | only on R"Ch / Yom Tov / Chol HaMoed | derived from steps above |
 | 8 | על הניסים | only on Chanukah / Purim | derived from specialDay being Chanukah or Purim |
-| 9 | תן טל ומטר / תן ברכה | always | see [Tal/matar](#-tn-tl-vmtr--tn-brkh) |
+| 9 | ותן טל ומטר / ותן ברכה | always | see [Tal/matar](#-tn-tl-vmtr--tn-brkh) |
 | 10 | מוריד הגשם / מוריד הטל | always | see [Geshem/tal](#-mvryd-hgshm--mvryd-htl) |
 
 The body is padded to **at least 7 rows**; rows 1–5 and 7–8 only appear
@@ -156,7 +156,7 @@ string year-to-year, no נדחה suffix.
 
 ---
 
-## Tal/matar — תן טל ומטר vs תן ברכה (row 9)
+## Tal/matar — ותן טל ומטר vs ותן ברכה (row 9)
 
 Context: the 9th blessing of the Amida (ברכת השנים). Winter formula
 includes the request for rain ("ותן טל ומטר לברכה"); summer formula
@@ -168,8 +168,8 @@ Israel rule:
 
 | Period | Text |
 |--------|------|
-| 7 Marcheshvan → 14 Nisan | **תן טל ומטר** |
-| 15 Nisan → 6 Marcheshvan | **תן ברכה** |
+| 7 Marcheshvan → 14 Nisan | **ותן טל ומטר** |
+| 15 Nisan → 6 Marcheshvan | **ותן ברכה** |
 
 The actual halachic switch occurs at Musaf of 15 Nisan (first day of
 Pesach). The display treats the entire day of 15 Nisan as summer formula

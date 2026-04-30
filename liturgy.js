@@ -104,7 +104,7 @@
       .replace(/״/g, '"');
   }
 
-  // Israel: say "תן טל ומטר" from 7 Marcheshvan through 14 Nisan.
+  // Israel: say "ותן טל ומטר" from 7 Marcheshvan through 14 Nisan.
   function isTalUMatar(hMonth, hDay) {
     if (hMonth === 8 && hDay >= 7) return true;
     if (hMonth >= 9 && hMonth <= 13) return true;
@@ -389,7 +389,7 @@
       roshChodesh, specialShabbat, shabbatMevarchim,
     } = info;
     const row1 = holidayName || getParshaForDate(jsDate);
-    const talRow = isTalUMatar(hMonth, hDay) ? 'תן טל ומטר' : 'תן ברכה';
+    const talRow = isTalUMatar(hMonth, hDay) ? 'ותן טל ומטר' : 'ותן ברכה';
     const geshem = isMoridHaGeshem(hMonth, hDay) ? 'מוריד הגשם' : 'מוריד הטל';
 
     // All "special day" markers stack ABOVE the parsha (or holidayName)

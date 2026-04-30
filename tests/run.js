@@ -156,7 +156,7 @@ console.log('\n── Liturgy.getDisplayText (max-row coincidence: Chanukah + R"
     `got ${JSON.stringify(nonEmpty[2])}`);
   eq('יעלה ויבוא row',     nonEmpty[3], 'יעלה ויבוא');
   eq('al hanisim row',    nonEmpty[4], 'על הניסים');
-  eq('tal row',           nonEmpty[5], 'תן טל ומטר');
+  eq('tal row',           nonEmpty[5], 'ותן טל ומטר');
   eq('geshem row',        nonEmpty[6], 'מוריד הגשם');
 }
 
