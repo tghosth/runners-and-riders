@@ -86,6 +86,22 @@
   const TIME_COLS = SHOW_SECONDS ? 8 : 5;
   const DATE_COLS = 14;
 
+  // Day-of-week labels: יום א' through יום ו' (5 chars each) and the
+  // longer יום שבת on Saturday (7 chars). The DOW section is sized to
+  // the longest variant; shorter labels get trailing blank cells on
+  // the visual left.
+  const HEBREW_DOW = [
+    "יום א'",   // 0 = Sunday
+    "יום ב'",   // 1 = Monday
+    "יום ג'",   // 2 = Tuesday
+    "יום ד'",   // 3 = Wednesday
+    "יום ה'",   // 4 = Thursday
+    "יום ו'",   // 5 = Friday
+    "יום שבת",  // 6 = Saturday
+  ];
+  const DOW_COLS = 7;
+  function dowText(jsDate) { return HEBREW_DOW[jsDate.getDay()]; }
+
   // Footer (sefira count) layout. Lines are padded to FOOTER_COLS so
   // cells stay uniformly sized across rows. 20 cells × 3 lines is the
   // smallest grid that holds every omer day's text (worst case is
@@ -185,20 +201,23 @@
   // by updateClock so only the cells whose char actually changed flip.
   let headerTimeCells = [];
   let headerDateCells = [];
+  let headerDowCells  = [];
 
-  // Builds the brass-plate header — two side-by-side panels (Hebrew
-  // date on the visual right, HH:MM time on the visual left) sized
-  // smaller than the body cells so they read as a subordinate row.
-  // Returns { headerEl, allCells } where allCells is in scheduling
-  // order so the cascade can stagger them like any body row.
+  // Builds the brass-plate header. The .board-header is now a flex
+  // column with two rows: the Hebrew date stands alone on top, and
+  // a "bottom" row carries the day-of-week (visual right) plus the
+  // wall-clock time (visual left). Returns { headerEl, allCells }
+  // where allCells is in scheduling order for the cascade.
   function buildHeaderRow(forDate) {
     const dateChars = Array.from(formatHebrewDate(forDate));
     const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
+    const dowChars  = Array.from(dowText(forDate));
 
     const headerEl = document.createElement('div');
     headerEl.className = 'board-header';
     const allCells = [];
 
+    // ── Top row: Hebrew date alone (RTL flex-start = visual right)
     const dateSection = document.createElement('div');
     dateSection.className = 'header-section header-date';
     headerDateCells = [];
@@ -209,6 +228,35 @@
       cell._charSet = HEBREW_CHAR_SET;
       dateSection.appendChild(cell.el);
       headerDateCells.push(cell);
+      allCells.push(cell);
+    }
+
+    // ── Bottom row: day-of-week (right) + time (left)
+    const bottomRow = document.createElement('div');
+    bottomRow.className = 'header-bottom-row';
+
+    // dowSection: DOW_COLS cells (= longest "יום שבת"). DOM-first =
+    // visual right in RTL; chars first, blank padding after for
+    // shorter weekday labels.
+    const dowSection = document.createElement('div');
+    dowSection.className = 'header-section header-dow';
+    headerDowCells = [];
+    for (const ch of dowChars) {
+      const cell = createCell();
+      setCellChar(cell, ' ');
+      cell._target = ch;
+      cell._charSet = HEBREW_CHAR_SET;
+      dowSection.appendChild(cell.el);
+      headerDowCells.push(cell);
+      allCells.push(cell);
+    }
+    for (let i = dowChars.length; i < DOW_COLS; i += 1) {
+      const cell = createCell();
+      setCellChar(cell, ' ');
+      cell._target = ' ';
+      cell._charSet = HEBREW_CHAR_SET;
+      dowSection.appendChild(cell.el);
+      headerDowCells.push(cell);
       allCells.push(cell);
     }
 
@@ -227,8 +275,13 @@
       allCells.push(cell);
     }
 
+    // dowSection first → visual right; timeSection second → visual
+    // left (justify-content: space-between separates them).
+    bottomRow.appendChild(dowSection);
+    bottomRow.appendChild(timeSection);
+
     headerEl.appendChild(dateSection);
-    headerEl.appendChild(timeSection);
+    headerEl.appendChild(bottomRow);
 
     return { headerEl, allCells };
   }
@@ -286,6 +339,11 @@
     if (!headerTimeCells.length && !headerDateCells.length) return;
     const timeChars = Array.from(TIME_FMT.format(getDisplayedTime()));
     const dateChars = Array.from(formatHebrewDate(selectedDate));
+    const dowChars  = Array.from(dowText(selectedDate));
+    // Pad dow to its full width with trailing blanks so the empty
+    // cells on shorter weekdays settle to ' '.
+    while (dowChars.length < DOW_COLS) dowChars.push(' ');
+
     const updateOne = (cell, ch) => {
       if (!cell || !ch || cell.current === ch) return;
       // Cancel any in-progress cycle on this cell so the minute tick
@@ -296,6 +354,7 @@
     };
     timeChars.forEach((ch, i) => updateOne(headerTimeCells[i], ch));
     dateChars.forEach((ch, i) => updateOne(headerDateCells[i], ch));
+    dowChars.forEach( (ch, i) => updateOne(headerDowCells[i],  ch));
   }
 
   /**

@@ -67,23 +67,29 @@ main {
   container-type: inline-size;
 }
 
-/* Brass-plate header: two side-by-side panels (date right, time left)
-   with smaller flap cells than the body so they read as a subordinate
-   row above the message. justify-content: space-between with dir="rtl"
-   on the parent puts the DOM-first child (date) at the visual right.
-   The gap below is the *minimum* separation between the date and time
-   sections — exactly one header cell width — so even on the narrowest
-   viewport there's always at least one cell-sized empty space between
-   them, just the brass plate showing through. The expression matches
-   the per-cell `min(56px, 5cqw)` so gap and cells shrink together. */
+/* Brass-plate header: two stacked rows of smaller flap cells than the
+   body so they read as a subordinate row above the message. The top
+   row carries the Hebrew date alone (cells flush to the visual right
+   per RTL); the bottom row carries the day-of-week on the visual right
+   and the wall-clock time on the visual left, separated by at least
+   one cell-sized empty gap (just brass plate showing through, no real
+   tile in it) — matching the per-cell `min(56px, 5cqw)` expression so
+   the gap and cells shrink together as the viewport narrows. */
 .board-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--cell-gap);
+  margin-bottom: calc(var(--cell-gap) * 3);
+  padding: 0 0.15rem;
+  min-width: 0;
+}
+
+.board-header .header-bottom-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: min(56px, 5cqw);
-  margin-bottom: calc(var(--cell-gap) * 3);
-  padding: 0 0.15rem;
-  /* Allow children to shrink below their preferred size on narrow frames. */
   min-width: 0;
 }
 

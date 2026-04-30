@@ -321,6 +321,34 @@ for (const [label, jsDate, expected] of OMER_DAY_CASES) {
   eq(label, Liturgy.getOmerDay(new HDate(jsDate)), expected);
 }
 
+// Header day-of-week labels: יום א' through יום ו' for Sun–Fri, and
+// יום שבת for Saturday. The longer Saturday form drives the section
+// width (DOW_COLS = 7); the test pins the mapping so a future shuffle
+// of the table can't go silently sideways.
+console.log('\n── Header day-of-week labels');
+{
+  const HEBREW_DOW = [
+    "יום א'",  "יום ב'",  "יום ג'",  "יום ד'",
+    "יום ה'",  "יום ו'",  "יום שבת",
+  ];
+  const dowOf = (jsDate) => HEBREW_DOW[jsDate.getDay()];
+  // Sun 4 May 2025 = Yom Rishon, Shabbat 3 May 2025 = יום שבת
+  for (const [d, expected] of [
+    [new Date(2025, 4, 4), "יום א'"],
+    [new Date(2025, 4, 5), "יום ב'"],
+    [new Date(2025, 4, 6), "יום ג'"],
+    [new Date(2025, 4, 7), "יום ד'"],
+    [new Date(2025, 4, 8), "יום ה'"],
+    [new Date(2025, 4, 9), "יום ו'"],
+    [new Date(2025, 4, 3), "יום שבת"],
+  ]) {
+    eq(`${d.toDateString()} → dow`, dowOf(d), expected);
+  }
+  // Saturday is the longest; everything else fits in DOW_COLS = 7
+  const longest = Math.max(...HEBREW_DOW.map(s => Array.from(s).length));
+  eq('longest dow label is 7 chars (drives DOW_COLS)', longest, 7);
+}
+
 // The header date should use single-vav month spellings (סיון, חשון)
 // to match the date picker, not the double-vav Academy-of-Hebrew forms
 // (סיוון, חשוון) that come out of `Intl.DateTimeFormat('he-IL-u-ca-hebrew')`.
