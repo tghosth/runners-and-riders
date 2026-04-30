@@ -3,7 +3,7 @@
 
   // Hebrew alphabet: 22 letters + 5 final forms + space + common punctuation/digits
   const HEBREW_LETTERS = 'אבגדהוזחטיכלמנסעפצקרשתךםןףץ';
-  const PUNCTUATION = ' .,!?־׳״';
+  const PUNCTUATION = ' .,!?־\'"';
   const DIGITS = '0123456789';
   const CHAR_SET = (HEBREW_LETTERS + PUNCTUATION + DIGITS).split('');
   const HEBREW_CHAR_SET = HEBREW_LETTERS.split('');
@@ -130,23 +130,25 @@
   // Hundreds: 100–400 are single letters; 500–900 use repeated ת (400).
   const G_HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'];
 
-  // Day-of-month gematria (1–30). 15 and 16 use the conventional ט״ו /
-  // ט״ז to avoid spelling fragments of the divine name.
+  // Day-of-month gematria (1–30). 15 and 16 use the conventional ט"ו /
+  // ט"ז to avoid spelling fragments of the divine name. Quote marks
+  // here are ASCII ' and " (geresh/gershayim look directional in some
+  // fonts; we standardise on straight quotes everywhere).
   const GEMATRIA_ONES = G_ONES;
   const GEMATRIA_TENS = ['', 'י', 'כ', 'ל'];
   function dayGematria(n, withMarks) {
-    if (n === 15) return withMarks ? 'ט״ו' : 'טו';
-    if (n === 16) return withMarks ? 'ט״ז' : 'טז';
+    if (n === 15) return withMarks ? 'ט"ו' : 'טו';
+    if (n === 16) return withMarks ? 'ט"ז' : 'טז';
     const tens = Math.floor(n / 10);
     const ones = n % 10;
-    if (n < 10) return withMarks ? GEMATRIA_ONES[ones] + '׳' : GEMATRIA_ONES[ones];
-    if (ones === 0) return withMarks ? GEMATRIA_TENS[tens] + '׳' : GEMATRIA_TENS[tens];
+    if (n < 10) return withMarks ? GEMATRIA_ONES[ones] + "'" : GEMATRIA_ONES[ones];
+    if (ones === 0) return withMarks ? GEMATRIA_TENS[tens] + "'" : GEMATRIA_TENS[tens];
     return withMarks
-      ? GEMATRIA_TENS[tens] + '״' + GEMATRIA_ONES[ones]
+      ? GEMATRIA_TENS[tens] + '"' + GEMATRIA_ONES[ones]
       : GEMATRIA_TENS[tens] + GEMATRIA_ONES[ones];
   }
 
-  // Hebrew year gematria (e.g. 5785 → "תשפ״ה"), dropping the thousands digit.
+  // Hebrew year gematria (e.g. 5785 → "תשפ"ה"), dropping the thousands digit.
   function yearGematria(year, withMarks) {
     const n = year % 1000;
     const h = Math.floor(n / 100);
@@ -158,8 +160,8 @@
     const str = G_HUNDREDS[h] + tensOnes;
     if (!withMarks) return str;
     if (str.length === 0) return str;
-    if (str.length === 1) return str + '׳';
-    return str.slice(0, -1) + '״' + str.slice(-1);
+    if (str.length === 1) return str + "'";
+    return str.slice(0, -1) + '"' + str.slice(-1);
   }
 
   // Format the Hebrew date as `[day-gematria] [month] [year]`. Tries to fit
@@ -171,7 +173,7 @@
     const hYear = new HDate(date).getFullYear();
     let str = `${dayGematria(dayInt, true)} ${month} ${yearGematria(hYear, true)}`;
     if (Array.from(str).length <= DATE_COLS) return str;
-    str = str.replace(/[׳״]/g, '');
+    str = str.replace(/['"]/g, '');
     if (Array.from(str).length <= DATE_COLS) return str;
     return Array.from(str).slice(0, DATE_COLS).join('');
   }
@@ -497,7 +499,7 @@
   function hebrewMonthName(month, isLeap) {
     const NAMES = ['', 'ניסן', 'אייר', 'סיון', 'תמוז', 'אב', 'אלול',
                    'תשרי', 'חשון', 'כסלו', 'טבת', 'שבט',
-                   isLeap ? 'אדר א׳' : 'אדר', 'אדר ב׳'];
+                   isLeap ? "אדר א'" : 'אדר', "אדר ב'"];
     return NAMES[month] || '';
   }
 

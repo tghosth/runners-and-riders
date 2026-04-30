@@ -147,12 +147,13 @@ console.log('\n── Liturgy.getDisplayText (max-row coincidence: Chanukah + R"
   const nonEmpty = rows.filter(Boolean);
   eq('non-empty rows', nonEmpty.length, 7);
   eq('total rows (padded to 7)', rows.length, 7);
-  // Spot-check the row identities so we notice silent reorderings
-  check('parsha row',     nonEmpty[0] === 'מקץ',
+  // Specials stack ABOVE the parsha — Chanukah day, then ראש חודש,
+  // then the parsha, then the Amidah-flow rows below.
+  check('Chanukah row',   /חנוכה/.test(nonEmpty[0]),
     `got ${JSON.stringify(nonEmpty[0])}`);
-  check('Chanukah row',   /חנוכה/.test(nonEmpty[1]),
-    `got ${JSON.stringify(nonEmpty[1])}`);
-  eq('Rosh Chodesh row',  nonEmpty[2], 'ראש חודש');
+  eq('Rosh Chodesh row',  nonEmpty[1], 'ראש חודש');
+  check('parsha row',     nonEmpty[2] === 'מקץ',
+    `got ${JSON.stringify(nonEmpty[2])}`);
   eq('יעלה ויבוא row',     nonEmpty[3], 'יעלה ויבוא');
   eq('al hanisim row',    nonEmpty[4], 'על הניסים');
   eq('tal row',           nonEmpty[5], 'תן טל ומטר');
@@ -245,7 +246,7 @@ console.log('\n── Liturgy.getDayInfo (fast days)');
     ['Tzom Gedaliah',     new Date(2025, 8, 25),  'צום גדליה'],
     ['Asara B\'Tevet',    new Date(2025, 11, 30), 'עשרה בטבת'],
     ['Ta\'anit Esther',   new Date(2026, 2, 2),   'תענית אסתר'],
-    ['Tzom Tammuz (17)',  new Date(2025, 6, 13),  'צום י״ז בתמוז'],
+    ['Tzom Tammuz (17)',  new Date(2025, 6, 13),  'צום י"ז בתמוז'],
     ['Tish\'a B\'Av',     new Date(2025, 7, 3),   'תשעה באב'],
     ['Ta\'anit Bechorot', new Date(2026, 3, 1),   'תענית בכורות'],
   ];
@@ -257,9 +258,14 @@ console.log('\n── Liturgy.getDayInfo (fast days)');
     Liturgy.getDayInfo(new Date(2025, 9, 2)).fastDay, '');
   // Regular weekday: no fast
   eq('Regular Tue: no fast', Liturgy.getDayInfo(new Date(2026, 0, 6)).fastDay, '');
-  // Deferred Tisha B'Av (when 9 Av is Shabbat) gets the נדחה label
-  eq('Tisha B\'Av deferred (Sun 22 Jul 2029)',
-    Liturgy.getDayInfo(new Date(2029, 6, 22)).fastDay, 'תשעה באב נדחה');
+  // Deferred Tisha B'Av (when 9 Av is Shabbat) shows the same label
+  // as the regular date so the row reads consistently year-to-year.
+  eq('Tisha B\'Av deferred (Sun 22 Jul 2029) — same label as regular',
+    Liturgy.getDayInfo(new Date(2029, 6, 22)).fastDay, 'תשעה באב');
+  // Erev Tisha B'Av — Hebcal flags it MAJOR_FAST + EREV, but it's the
+  // eve, not the fast. We exclude EREV so it doesn't surface.
+  eq('Erev Tisha B\'Av (Mon 12 Aug 2024): no fastDay',
+    Liturgy.getDayInfo(new Date(2024, 7, 12)).fastDay, '');
 }
 
 // Shushan Purim Katan only happens in Adar I of leap years (so once
@@ -269,7 +275,7 @@ console.log('\n── Liturgy.getDayInfo (Shushan Purim Katan)');
 {
   // Sat 24 Feb 2024 = 15 Adar I 5784 = Shushan Purim Katan
   const d = new Date(2024, 1, 24);
-  eq('Sat 24 Feb 2024: specialDay', Liturgy.getDayInfo(d).specialDay, 'שו׳ פורים קטן');
+  eq('Sat 24 Feb 2024: specialDay', Liturgy.getDayInfo(d).specialDay, "שו' פורים קטן");
 }
 
 console.log('\n── Liturgy.getDayInfo (Rosh Chodesh)');
