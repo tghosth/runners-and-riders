@@ -9,9 +9,16 @@
   const HEBREW_CHAR_SET = HEBREW_LETTERS.split('');
   const TIME_CHAR_SET = DIGITS.split('');
 
-  const STAGGER_MS = 300;
-  const MIN_CYCLES = 10;
-  const MAX_CYCLES = 22;
+  // Single knob for the load cascade pace. 1 = baseline (rows stagger
+  // 300 ms apart, each cell does 10–22 random flips before landing).
+  // < 1 → faster cascade (e.g. 0.5 halves both the stagger and the
+  // per-cell flip count); > 1 → slower. The per-flap CSS animation
+  // (FLIP_DURATION_MS, 80 ms) stays constant either way so individual
+  // tile turns always feel snappy.
+  const FLICKER_SCALE = 1;
+  const STAGGER_MS = Math.round(300 * FLICKER_SCALE);
+  const MIN_CYCLES = Math.max(1, Math.round(10 * FLICKER_SCALE));
+  const MAX_CYCLES = Math.max(MIN_CYCLES, Math.round(22 * FLICKER_SCALE));
   const MAX_COLS = 13;
 
   // ?instant in the URL skips all flip animation — cells show their
