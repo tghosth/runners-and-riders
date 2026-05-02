@@ -29,7 +29,7 @@ jobs:
 
       - name: Inject commit SHA
         run: |
-          sed -i "s/__COMMIT_SHA__/${GITHUB_SHA}/g" index.html theme-baseline.css theme-attempt1.css theme-attempt2.css
+          sed -i "s/__COMMIT_SHA__/${GITHUB_SHA}/g" index.html theme-baseline.css theme-attempt1.css theme-attempt2.css theme-attempt3.css
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

@@ -6,19 +6,20 @@
   <title>לוח יציאות — Jerusalem Stone Split-Flap</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- All three design fonts loaded so theme switching is instant. -->
-  <link href="https://fonts.googleapis.com/css2?family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- All three design themes loaded with media="not all" so the
-       browser fetches each on first paint without applying it. The
-       inline script below activates one (from localStorage, default
-       attempt2) by switching its media to "all". The dropdown in
+  <!-- All design fonts loaded so theme switching is instant. -->
+  <link href="https://fonts.googleapis.com/css2?family=Bellefair&family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- All design themes loaded with media="not all" so the browser
+       fetches each on first paint without applying it. The inline
+       script below activates one (from localStorage, default
+       attempt3) by switching its media to "all". The dropdown in
        .controls toggles them at runtime. -->
   <link rel="stylesheet" href="theme-baseline.css?v=__COMMIT_SHA__" media="not all" id="theme-baseline">
   <link rel="stylesheet" href="theme-attempt1.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt1">
   <link rel="stylesheet" href="theme-attempt2.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt2">
+  <link rel="stylesheet" href="theme-attempt3.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt3">
   <script>
     (function () {
-      var saved = localStorage.getItem('design-theme') || 'attempt2';
+      var saved = localStorage.getItem('design-theme') || 'attempt3';
       var link = document.getElementById('theme-' + saved);
       if (link) link.media = 'all';
     })();
@@ -38,6 +39,7 @@
           <option value="baseline">בסיס — אבן ירושלמית</option>
           <option value="attempt1">ניסיון 1 — עץ + זכוכית</option>
           <option value="attempt2">ניסיון 2 — זכוכית · Bellefair</option>
+          <option value="attempt3">ניסיון 3 — זכוכית קרירה · David Libre</option>
         </select>
       </div>
       <div class="control-row">
@@ -91,10 +93,10 @@
     // already activated the saved theme; this only wires up live
     // switching.
     (function () {
-      var THEMES = ['baseline', 'attempt1', 'attempt2'];
+      var THEMES = ['baseline', 'attempt1', 'attempt2', 'attempt3'];
       var sel = document.getElementById('theme-select');
       if (!sel) return;
-      sel.value = localStorage.getItem('design-theme') || 'attempt2';
+      sel.value = localStorage.getItem('design-theme') || 'attempt3';
       sel.addEventListener('change', function () {
         var name = sel.value;
         THEMES.forEach(function (t) {
