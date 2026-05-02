@@ -6,6 +6,14 @@ commit that introduces the design and a short description of the changes.
 The split-flap mechanism, RTL layout, and all liturgical content stay the
 same across attempts — only visual styling moves.
 
+## Comparing live
+
+All three designs ship as separate stylesheets (`theme-baseline.css`,
+`theme-attempt1.css`, `theme-attempt2.css`) and load together on page
+open. The **עיצוב** dropdown at the top of the controls switches between
+them instantly; selection is persisted in `localStorage` under the key
+`design-theme`. Theme-switcher infrastructure was added in `f329c99`.
+
 ## Baseline
 
 - **`17e2134`** — *Even up section widths and tidy the cell seam*
