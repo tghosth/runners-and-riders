@@ -26,3 +26,26 @@ same across attempts — only visual styling moves.
   faint highlight.
 - Palette retuned cooler: slate text, muted earth accent, off-white
   page background.
+- **Feedback:** wood OK; tiles look blocky/artificial rather than
+  glass; Heebo disliked.
+
+## Attempt 2: Glassier tiles + Bellefair (Koren-substitute)
+
+- **`20054c2`** — *Design Attempt 2: glassier tiles + Bellefair (Koren-substitute)*
+- Wood frame and overall palette kept from Attempt 1.
+- Tiles: `--flap-*` retuned to a near-white range
+  (`#fefcf6` → `#f4eedb` → `#e6dcc1`) for a translucent glass feel
+  instead of opaque painted blocks.
+- Each face gets a radial sheen at the top + a 1.5 px inset white
+  highlight along the top edge. With `--cell-gap: 0`, that highlight
+  doubles as a shelf-line at every row boundary.
+- Bottom half adds a faint inner shadow at its base to suggest glass
+  thickness.
+- Font: Heebo → **Bellefair** (Google Fonts), the closest free
+  equivalent to **Koren** — Koren is a commercial Koren Publishers
+  Jerusalem typeface and isn't available as a free web font, so this
+  is a substitute. Swap the URL in `index.html` if a Koren web-font
+  license is sourced.
+- Bellefair is single-weight 400, so cell/flap/letter font-weight is
+  400 to use the natural strokes (no synthetic bold). Fallback chain
+  corrected to a serif stack.
