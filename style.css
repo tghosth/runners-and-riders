@@ -15,10 +15,13 @@
   --ink: #1f2024;             /* text */
   --brass: #b8af90;           /* champagne / brushed metal */
 
-  /* Glass flap face — clean cream gradient, no texture. */
-  --flap-light: #fbf7ee;
-  --flap-mid: #ece4d2;
-  --flap-deep: #c8be9e;
+  /* Glass flap face — light, low-contrast cream so the tiles read as
+     translucent glass rather than opaque painted blocks. The depth
+     comes from a sheen highlight + top-edge inset, not a strong
+     light/dark gradient. */
+  --flap-light: #fefcf6;
+  --flap-mid: #f4eedb;
+  --flap-deep: #e6dcc1;
 
   /* Cells flex to fill the frame so the whole board always fits the
      viewport with no horizontal scroll. Hard cap is 13 cells across
@@ -40,7 +43,7 @@ html, body {
     var(--stone-bg);
   background-attachment: fixed;
   color: var(--ink);
-  font-family: 'Heebo', 'Helvetica Neue', system-ui, sans-serif;
+  font-family: 'Bellefair', 'Times New Roman', Times, serif;
   min-height: 100vh;
 }
 
@@ -199,16 +202,22 @@ main {
   /* 93cqi ≈ 0.7 × cell-height (cell aspect 3:4, height = 4/3 × width). */
   font-size: 93cqi;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--ink);
   background: var(--flap-light);
   user-select: none;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
 }
 
 .cell .half.top {
   top: 0;
-  background: linear-gradient(180deg, var(--flap-light) 0%, var(--flap-mid) 100%);
+  background:
+    radial-gradient(ellipse 140% 80% at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 65%),
+    linear-gradient(180deg, var(--flap-light) 0%, var(--flap-mid) 100%);
+  /* Top-edge highlight catches the light like a glass front. With
+     cell-gap: 0 this also draws a 1.5 px white shelf-line at every
+     row boundary, reinforcing the stacked-glass feel. */
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.85);
   align-items: flex-end;
 }
 
@@ -219,6 +228,8 @@ main {
 .cell .half.bottom {
   bottom: 0;
   background: linear-gradient(180deg, var(--flap-mid) 0%, var(--flap-deep) 100%);
+  /* Faint inner shadow at the very bottom suggests glass thickness. */
+  box-shadow: inset 0 -1px 1px rgba(0,0,0,0.04);
   align-items: flex-start;
 }
 
@@ -233,16 +244,19 @@ main {
   right: 0;
   top: 0;
   height: 50%;
-  background: linear-gradient(180deg, var(--flap-light) 0%, var(--flap-mid) 100%);
-  border-bottom: 1px solid rgba(0,0,0,0.08);
+  background:
+    radial-gradient(ellipse 140% 80% at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 65%),
+    linear-gradient(180deg, var(--flap-light) 0%, var(--flap-mid) 100%);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,0.85);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   font-size: 93cqi;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--ink);
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
   overflow: hidden;
   transform-origin: 50% 100%;
   z-index: 2;
@@ -274,12 +288,12 @@ main {
   justify-content: center;
   font-size: 93cqi;
   line-height: 1;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--ink);
   pointer-events: none;
   user-select: none;
   z-index: 3;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
 }
 
 .cell.flipping .letter {
@@ -309,7 +323,7 @@ main {
 
 .controls input[type="date"],
 .controls select {
-  font-family: 'Heebo', 'Helvetica Neue', system-ui, sans-serif;
+  font-family: 'Bellefair', 'Times New Roman', Times, serif;
   font-size: 1.05rem;
   padding: 0.45rem 0.8rem;
   border: 1px solid var(--stone-deep);
@@ -334,7 +348,7 @@ main {
 }
 
 .controls button {
-  font-family: 'Heebo', 'Helvetica Neue', system-ui, sans-serif;
+  font-family: 'Bellefair', 'Times New Roman', Times, serif;
   font-weight: 700;
   font-size: 1.05rem;
   padding: 0.55rem 1.4rem;
@@ -393,7 +407,7 @@ main {
 }
 
 .hcal-nav button {
-  font-family: 'Heebo', 'Helvetica Neue', system-ui, sans-serif;
+  font-family: 'Bellefair', 'Times New Roman', Times, serif;
   background: transparent;
   border: 1px solid var(--stone-deep);
   border-radius: 6px;
@@ -430,7 +444,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Heebo', 'Helvetica Neue', system-ui, sans-serif;
+  font-family: 'Bellefair', 'Times New Roman', Times, serif;
   font-size: 1rem;
   font-weight: 500;
   border-radius: 6px;
