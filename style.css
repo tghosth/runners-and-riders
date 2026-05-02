@@ -80,8 +80,7 @@ main {
   flex-direction: column;
   align-items: stretch;
   gap: var(--cell-gap);
-  margin-bottom: calc(var(--cell-gap) * 3);
-  padding: 0 0.15rem;
+  margin-bottom: 6px;
   min-width: 0;
 }
 
@@ -144,8 +143,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--cell-gap);
-  margin-top: calc(var(--cell-gap) * 3);
-  padding: 0 0.15rem;
+  margin-top: 6px;
   min-width: 0;
 }
 
@@ -221,7 +219,7 @@ main {
 .cell .half.top {
   top: 0;
   background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
+    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 75%, rgba(220,205,178,0.92) 100%),
     var(--stone-texture);
   align-items: flex-end;
   /* No seam in the static state — the line was reading as cutting
@@ -239,7 +237,7 @@ main {
 .cell .half.bottom {
   bottom: 0;
   background-image:
-    linear-gradient(180deg, rgba(220,205,178,0.55) 0%, rgba(180,160,130,0.45) 100%),
+    linear-gradient(180deg, rgba(220,205,178,0.92) 0%, rgba(220,205,178,0.55) 25%, rgba(180,160,130,0.45) 100%),
     var(--stone-texture);
   /* Deterministic offset from the top so the bottom half shows a *different*
      slice of the slab (otherwise both halves mirror identical pixels). */
@@ -262,7 +260,7 @@ main {
   top: 0;
   height: 50%;
   background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
+    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 75%, rgba(220,205,178,0.92) 100%),
     var(--stone-texture);
   background-size: auto, var(--stone-tile);
   background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
