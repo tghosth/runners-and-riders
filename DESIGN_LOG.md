@@ -57,3 +57,27 @@ them instantly; selection is persisted in `localStorage` under the key
 - Bellefair is single-weight 400, so cell/flap/letter font-weight is
   400 to use the natural strokes (no synthetic bold). Fallback chain
   corrected to a serif stack.
+- **Feedback:** tiles still read as cheap plastic; Bellefair too
+  thin / unclear at large sizes.
+
+## Attempt 3: Cool glass + David Libre 700
+
+- **`00453b5`** — *Design Attempt 3: cool glass + David Libre 700*
+- Wood frame kept; tile palette shifted from warm cream to cool
+  off-white with a faint green undertone so the flaps read as cold
+  glass rather than warm cream plastic. `--flap-light #f4f6f2` /
+  `--flap-mid #dde0db` / `--flap-deep #babfb8`.
+- Highlights are now sharp specular reflections rather than soft
+  sheens: a thin (0–18%) linear highlight at the very top of each
+  face plus an ambient radial sky-glow below it. Top-edge inset is
+  2 px at 0.95 alpha (was 1.5 px / 0.85).
+- Glass thickness: the bottom half gains a 1 px dark hairline at
+  its base + a soft inner shadow above it, reading as the underside
+  thickness of a real piece of glass. A faint sub-reflection at the
+  top of the bottom half keeps the two halves feeling continuous.
+- Font: Bellefair → **David Libre at weight 700**. Same elegant
+  Hebrew-serif lineage as Bellefair / Koren, but with a proper bold
+  weight that's much clearer at the large board sizes. Cell / flap /
+  letter overlays all use 700 explicitly.
+- Default theme is now `attempt3`. Attempts 1 and 2 remain
+  selectable from the עיצוב dropdown for comparison.
