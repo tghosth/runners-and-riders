@@ -6,8 +6,23 @@
   <title>לוח יציאות — Jerusalem Stone Split-Flap</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bellefair&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=__COMMIT_SHA__">
+  <!-- All three design fonts loaded so theme switching is instant. -->
+  <link href="https://fonts.googleapis.com/css2?family=Bellefair&family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- All three design themes loaded with media="not all" so the
+       browser fetches each on first paint without applying it. The
+       inline script below activates one (from localStorage, default
+       attempt2) by switching its media to "all". The dropdown in
+       .controls toggles them at runtime. -->
+  <link rel="stylesheet" href="theme-baseline.css?v=__COMMIT_SHA__" media="not all" id="theme-baseline">
+  <link rel="stylesheet" href="theme-attempt1.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt1">
+  <link rel="stylesheet" href="theme-attempt2.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt2">
+  <script>
+    (function () {
+      var saved = localStorage.getItem('design-theme') || 'attempt2';
+      var link = document.getElementById('theme-' + saved);
+      if (link) link.media = 'all';
+    })();
+  </script>
   <meta name="build-sha" content="__COMMIT_SHA__">
 </head>
 <body>
@@ -17,6 +32,14 @@
     </section>
 
     <section class="controls">
+      <div class="control-row">
+        <label for="theme-select">עיצוב</label>
+        <select id="theme-select" dir="rtl">
+          <option value="baseline">בסיס — אבן ירושלמית</option>
+          <option value="attempt1">ניסיון 1 — עץ + זכוכית</option>
+          <option value="attempt2">ניסיון 2 — זכוכית · Bellefair</option>
+        </select>
+      </div>
       <div class="control-row">
         <label>תאריך לועזי</label>
         <select id="greg-day" dir="ltr"></select>
@@ -51,7 +74,7 @@
   </main>
 
   <footer class="page-footer">
-    <small>אבן ירושלמית · Bellefair · <span id="build-sha" dir="ltr">dev</span></small>
+    <small>אבן ירושלמית · <span id="build-sha" dir="ltr">dev</span></small>
   </footer>
 
   <!-- Temporal polyfill — must load before hebcal-core, since the
@@ -61,5 +84,26 @@
   <script src="core.js?v=__COMMIT_SHA__"></script>
   <script src="liturgy.js?v=__COMMIT_SHA__"></script>
   <script src="app.js?v=__COMMIT_SHA__"></script>
+  <script>
+    // Theme switcher: dropdown selects one of the three theme
+    // stylesheets loaded in <head>. Persisted to localStorage so the
+    // page reopens with the same selection. The head-level script
+    // already activated the saved theme; this only wires up live
+    // switching.
+    (function () {
+      var THEMES = ['baseline', 'attempt1', 'attempt2'];
+      var sel = document.getElementById('theme-select');
+      if (!sel) return;
+      sel.value = localStorage.getItem('design-theme') || 'attempt2';
+      sel.addEventListener('change', function () {
+        var name = sel.value;
+        THEMES.forEach(function (t) {
+          var link = document.getElementById('theme-' + t);
+          if (link) link.media = (t === name) ? 'all' : 'not all';
+        });
+        localStorage.setItem('design-theme', name);
+      });
+    })();
+  </script>
 </body>
 </html>
