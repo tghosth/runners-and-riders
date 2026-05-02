@@ -1,0 +1,495 @@
+:root {
+  /* Modern light-wood + frosted-glass palette. Var names kept from the
+     prior Jerusalem-stone design so downstream rules don't all need to
+     change; values retuned: cream surfaces, ash-wood frame, slate text,
+     champagne metal trim. The stone slab texture is no longer
+     referenced — flap faces are smooth gradients. */
+  --stone-bg: #f3eee5;        /* page bg / coolest cream */
+  --stone-light: #ebe4d6;     /* control surface */
+  --stone-mid: #d8c8a8;       /* light ash wood */
+  --stone-shadow: #b89c70;    /* mid wood */
+  --stone-deep: #8a6f48;      /* wood shadow */
+  --ochre: #95896c;           /* muted earth accent */
+  --walnut: #494d57;          /* slate */
+  --walnut-dark: #2c2e34;     /* deep slate (frame inner) */
+  --ink: #1f2024;             /* text */
+  --brass: #b8af90;           /* champagne / brushed metal */
+
+  /* Glass flap face — cool off-white with a faint green undertone
+     so the tiles read as cold glass rather than warm cream plastic.
+     Highlights are sharp specular reflections (not soft sheens) and
+     a faint dark line at the bottom edge suggests glass thickness. */
+  --flap-light: #f4f6f2;
+  --flap-mid: #dde0db;
+  --flap-deep: #babfb8;
+
+  /* Cells flex to fill the frame so the whole board always fits the
+     viewport with no horizontal scroll. Hard cap is 13 cells across
+     (MAX_COLS in app.js); rows are padded so every row has the same
+     count, keeping cell width uniform. Per-cell sizing (width / height
+     / font-size) is derived from the cell's own size via container
+     queries — no --cell-w / --cell-h vars needed. */
+  --cell-gap: 0px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.55) 0%, transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(184,156,112,0.10) 0%, transparent 60%),
+    var(--stone-bg);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
+  min-height: 100vh;
+}
+
+main {
+  /* Caps the board on wide screens; cells flex-fill within. */
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* ─── Display housing ────────────────────────────────────────── */
+.display-frame {
+  background: linear-gradient(180deg, var(--stone-mid) 0%, var(--stone-shadow) 100%);
+  border: 2px solid var(--brass);
+  border-radius: 18px;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 -2px 6px rgba(138,111,72,0.25),
+    0 12px 28px rgba(60, 50, 35, 0.18),
+    0 2px 6px rgba(0,0,0,0.10);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  /* Sized container so the smaller header flaps below can be expressed
+     as a fraction of the frame's content width via cqw. */
+  container-type: inline-size;
+}
+
+/* Brass-plate header: two stacked rows of smaller flap cells than the
+   body so they read as a subordinate row above the message. The top
+   row carries the Hebrew date alone (cells flush to the visual right
+   per RTL); the bottom row carries the day-of-week on the visual right
+   and the wall-clock time on the visual left, separated by at least
+   one cell-sized empty gap (just brass plate showing through, no real
+   tile in it) — matching the per-cell `min(56px, 5cqw)` expression so
+   the gap and cells shrink together as the viewport narrows. */
+.board-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--cell-gap);
+  margin-bottom: 6px;
+  min-width: 0;
+}
+
+/* Bottom row reads as one continuous strip of HEADER_COLS flaps —
+   sections are siblings with the same cell-gap as cells inside each
+   section, so the dow + spacer + time tiles look uniform across the
+   row. Width: 100% combined with `flex: <cells> 1 0` on each child
+   section makes them share the row width in proportion to their cell
+   count. */
+.board-header .header-bottom-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--cell-gap);
+  width: 100%;
+  min-width: 0;
+}
+
+.board-header .header-section {
+  display: flex;
+  gap: var(--cell-gap);
+  min-width: 0;
+  /* Default: section flex-fills its parent. The bottom row has three
+     sections (dow / spacer / time) sharing the row width — JS sets
+     each one's inline `flex-grow` to its cell count, so the row
+     reads as 16 uniformly-sized tiles total just like the top row. */
+  flex: 1 1 0;
+}
+
+/* Time digits read left-to-right even though the rest of the frame is
+   RTL — without this override "14:30" comes out as "03:41". */
+.board-header .header-time {
+  direction: ltr;
+}
+
+/* Header cells flex-fill the row (no fixed-width override), so 18
+   tiles span the frame width with the same gaps as a body row. Body
+   rows have 13 flex-filling cells, so body cells are slightly wider
+   than header cells — that subordination is exactly the visual
+   hierarchy we want, no extra rules needed. */
+.board-header .cell {
+  /* falls through to `.cell { flex: 1 1 0; … }` */
+}
+
+/* Cells in the notile section between dow and time. Same width and
+   height as a real flap cell (so the row stays uniform), but with no
+   visual content — the brass plate of .display-frame shows through. */
+.board-header .header-notile-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+}
+
+/* Footer for the Sefirat HaOmer count — mirrors the header's "smaller
+   subordinate row" treatment but stacks two flex rows below the
+   message body. Both lines are padded in JS to the same FOOTER_COLS
+   so the cells are uniformly sized; flex: 1 1 0 on each cell shares
+   the row width equally. With ~30 cells per line, each is roughly
+   half the width of a body cell. */
+.board-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+  margin-top: 6px;
+  min-width: 0;
+}
+
+.board-footer .footer-line {
+  display: flex;
+  gap: var(--cell-gap);
+  width: 100%;
+  /* dir="rtl" is inherited from .board */
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
+  width: 100%;
+}
+
+.board-row {
+  display: flex;
+  /* dir="rtl" on the board already lays children right-to-left;
+     a row-reverse here would double-reverse and read LTR. */
+  gap: var(--cell-gap);
+  width: 100%;
+}
+
+/* ─── Flap cell ──────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  /* Establish a containment context so descendants can size with cqw/cqi. */
+  container-type: inline-size;
+  background: var(--walnut-dark);
+  /* Force the cell to its own stacking context so the .letter overlay
+     reliably paints above the half-seam shadows regardless of which
+     descendants the browser composites on separate layers. */
+  isolation: isolate;
+}
+
+.cell .half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 0;
+  /* 93cqi ≈ 0.7 × cell-height (cell aspect 3:4, height = 4/3 × width). */
+  font-size: 93cqi;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--flap-light);
+  user-select: none;
+}
+
+.cell .half.top {
+  top: 0;
+  background:
+    /* Sharp specular highlight at the very top — like sunlight on a
+       polished glass edge. */
+    linear-gradient(180deg, rgba(255,255,255,0.55) 0%, transparent 18%),
+    /* Soft ambient sky-glow filling the upper third. */
+    radial-gradient(ellipse 130% 75% at 50% 0%, rgba(255,255,255,0.45) 0%, transparent 70%),
+    linear-gradient(180deg, var(--flap-light) 0%, var(--flap-mid) 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.95);
+  align-items: flex-end;
+}
+
+.cell .half.top span {
+  transform: translateY(50%);
+}
+
+.cell .half.bottom {
+  bottom: 0;
+  background:
+    /* Faint sub-reflection across the top of the bottom half so the
+       glass reads as continuous (light caught by the lower face). */
+    linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 22%),
+    linear-gradient(180deg, var(--flap-mid) 0%, var(--flap-deep) 100%);
+  /* Inner shadow at the very base + a 1 px dark hairline at the
+     bottom edge — together they read as the underside thickness of
+     a real piece of glass. */
+  box-shadow:
+    inset 0 -1px 0 rgba(0,0,0,0.10),
+    inset 0 -3px 4px rgba(0,0,0,0.06);
+  align-items: flex-start;
+}
+
+.cell .half.bottom span {
+  transform: translateY(-50%);
+}
+
+/* The flipping flap (covers the top half during animation) */
+.cell .flap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 50%;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.55) 0%, transparent 18%),
+    radial-gradient(ellipse 130% 75% at 50% 0%, rgba(255,255,255,0.45) 0%, transparent 70%),
+    linear-gradient(180deg, var(--flap-light) 0%, var(--flap-mid) 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.95);
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 93cqi;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  z-index: 2;
+}
+
+.cell .flap span {
+  transform: translateY(50%);
+  user-select: none;
+}
+
+.cell.flipping .flap {
+  animation: fold-down 80ms ease-in forwards;
+}
+
+/* Whole-letter overlay drawn above the seam between the two halves, so
+   the static letter reads as a single character rather than two clipped
+   halves with a visible groove through the middle. Hidden during a flip
+   (opacity: 0 below) so the standard split-flap animation still reads.
+   Critically, this sits *above* the .flap (z-index 2) — the flap covers
+   the top half at rest and carries its own border-bottom at y=50%, so
+   without raising .letter above it the seam line painted in front of
+   the glyph. During a flip the letter is invisible, so its higher
+   z-index doesn't interfere with the fold. */
+.cell .letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 93cqi;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+  pointer-events: none;
+  user-select: none;
+  z-index: 3;
+}
+
+.cell.flipping .letter {
+  opacity: 0;
+}
+
+@keyframes fold-down {
+  0%   { transform: scaleY(1); }
+  100% { transform: scaleY(0); }
+}
+
+/* ─── Controls ───────────────────────────────────────────────── */
+.controls {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--stone-shadow);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 6px rgba(61, 43, 31, 0.15);
+  backdrop-filter: blur(2px);
+}
+
+.controls label {
+  font-weight: 700;
+  color: var(--walnut);
+  font-size: 1.05rem;
+}
+
+.controls input[type="date"],
+.controls select {
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
+  font-size: 1.05rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--stone-deep);
+  border-radius: 8px;
+  background: var(--stone-bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.controls input[type="date"]:focus,
+.controls select:focus {
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.controls button {
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0.55rem 1.4rem;
+  background: linear-gradient(180deg, var(--brass) 0%, var(--ochre) 100%);
+  color: var(--walnut-dark);
+  border: 1px solid var(--ochre);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(61,43,31,0.25), inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: transform 0.08s ease;
+}
+
+.controls button:hover { filter: brightness(1.05); }
+.controls button:active { transform: translateY(1px); }
+
+/* ─── Hebrew calendar popup ─────────────────────────────────── */
+.hcal-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+#hcal-toggle {
+  font-size: 1.2rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--stone-bg);
+  border: 1px solid var(--stone-deep);
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#hcal-toggle:hover { filter: brightness(1.04); }
+#hcal-toggle:focus { outline: 2px solid var(--brass); outline-offset: 1px; }
+
+.hcal-popup {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 100;
+  background: var(--stone-bg);
+  border: 1px solid var(--stone-deep);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(36, 27, 20, 0.25);
+  padding: 0.6rem;
+  min-width: 18rem;
+  direction: rtl;
+}
+
+.hcal-popup[hidden] { display: none; }
+
+.hcal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.hcal-nav button {
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
+  background: transparent;
+  border: 1px solid var(--stone-deep);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  color: var(--walnut);
+}
+
+.hcal-nav button:hover { background: var(--stone-light); }
+
+.hcal-label {
+  font-weight: 700;
+  color: var(--walnut);
+  font-size: 1.05rem;
+}
+
+.hcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.hcal-dow {
+  text-align: center;
+  font-weight: 700;
+  color: var(--ochre);
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+}
+
+.hcal-day,
+.hcal-pad {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.hcal-pad { background: transparent; }
+
+.hcal-day {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+
+.hcal-day:hover {
+  background: var(--stone-light);
+  border-color: var(--stone-deep);
+}
+
+.hcal-day.selected {
+  background: var(--ochre);
+  color: var(--stone-bg);
+  border-color: var(--walnut);
+}
+
+.page-footer {
+  text-align: center;
+  padding: 1.5rem 1rem 2.5rem;
+  color: var(--ochre);
+  opacity: 0.8;
+}
+
+.page-footer #build-sha a {
+  color: inherit;
+  text-decoration: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.page-footer #build-sha a:hover { text-decoration: underline; }
+
