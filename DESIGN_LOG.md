@@ -141,4 +141,30 @@ them instantly; selection is persisted in `localStorage` under the key
   is preserved, the readability cost is gone. Cells remain
   individually animated for the flip mechanic; only the static
   appearance merges.
-- Default theme is now `attempt6`. Attempts 1–5 stay selectable.
+- **Feedback:** the seam between top and bottom halves reads as a
+  hard boundary — wanted a smoother transition.
+
+## Attempt 7: Smooth top → bottom transition
+
+- **`27da4ef`** — *Design Attempt 7: smooth top → bottom transition*
+- Same material as Attempt 6. Three changes that together remove
+  the visible step at the seam:
+  1. Flap's `border-bottom` from `rgba(0,0,0,0.14)` to
+     `rgba(0,0,0,0.04)` — barely visible at rest, still defines
+     the falling-flap edge during the flip animation.
+  2. The bottom half's sub-reflection (a `linear-gradient` white
+     band at its top) is removed — that band was creating a bright
+     stripe right below the seam.
+  3. The flap's base tint end alpha matches the bottom half's
+     start exactly (both `--flap-mid` at 0.62) so the colour
+     handoff is identical.
+- The full-perimeter inner glow (`inset 0 0 14px`) is replaced
+  with side-only insets, mirrored on both halves. The flap's
+  bottom edge and the bottom half's top edge no longer get extra
+  brightening that wouldn't continue across the seam.
+- Net: the cell reads as one continuous piece of frosted glass
+  with the letter set into it, instead of two separate plates.
+  Flip animation still works — the flap is its own animated
+  element, just visually indistinguishable from the bottom half at
+  rest.
+- Default theme is now `attempt7`. Attempts 1–6 stay selectable.
