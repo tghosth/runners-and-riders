@@ -101,5 +101,27 @@ them instantly; selection is persisted in `localStorage` under the key
   the front face is slightly convex.
 - Bottom-half thickness emphasised: hairline bumped to alpha 0.12,
   inner shadow extended to 4 px / 0.08.
-- Default theme is now `attempt4`. Attempts 1–3 stay selectable for
-  comparison.
+- **Feedback:** push it further — make it more glassy.
+
+## Attempt 5: Real frosted glass via backdrop-filter
+
+- **`8cd7487`** — *Design Attempt 5: real frosted glass via backdrop-filter*
+- Commits to glass-on-wood by combining all three directions
+  suggested at the end of Attempt 4.
+- `--cell-gap: 0 → 3 px`. Each cell is visibly a discrete piece of
+  glass set into the wood frame; wood shows through the gaps
+  between tiles and at every row boundary.
+- `backdrop-filter: blur(10px) saturate(115%)` on `.half` / `.flap`.
+  This actually blurs the `.display-frame`'s wood gradient behind
+  each face — the canonical frosted-glass effect, not a faked one.
+  `-webkit-` prefix included for Safari.
+- Tint alpha lowered to 0.55–0.72 (from 0.86–0.94 in Attempt 4) so
+  the blurred wood backdrop is the dominant material reading, not
+  the cream tint on top of it.
+- `isolation: isolate` dropped from `.cell` — backdrop-filter needs
+  to see through to the frame layer; `.letter` still paints above
+  `.flap` because both have explicit z-index.
+- Highlights kept from Attempt 4 (sharp top specular, sky-glow,
+  lens-style central highlight, top-edge inset, inner glow, bottom
+  hairline + thickness shadow).
+- Default theme is now `attempt5`. Attempts 1–4 stay selectable.
