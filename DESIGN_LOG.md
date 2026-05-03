@@ -124,4 +124,21 @@ them instantly; selection is persisted in `localStorage` under the key
 - Highlights kept from Attempt 4 (sharp top specular, sky-glow,
   lens-style central highlight, top-edge inset, inner glow, bottom
   hairline + thickness shadow).
-- Default theme is now `attempt5`. Attempts 1–4 stay selectable.
+- **Feedback:** the 3 px gap broke Hebrew readability — each
+  letter felt isolated from the next.
+
+## Attempt 6: Continuous frosted glass (drop the gap)
+
+- **`19e9bf9`** — *Design Attempt 6: continuous frosted glass (drop the gap)*
+- Same frosted-glass material as Attempt 5 (backdrop-filter blur on
+  the wood, alpha 0.55–0.72 cool tint, sharp top specular,
+  sky-glow, lens-style central highlight, top-edge inset, inner
+  glow, bottom hairline + thickness shadow).
+- `--cell-gap: 3 px → 0`. Adjacent cells touch and a row reads as
+  one continuous frosted-glass strip with letters set into it.
+- The wood frame is still present *under* every cell, so
+  backdrop-filter has the same backdrop to blur — the glass effect
+  is preserved, the readability cost is gone. Cells remain
+  individually animated for the flip mechanic; only the static
+  appearance merges.
+- Default theme is now `attempt6`. Attempts 1–5 stay selectable.
