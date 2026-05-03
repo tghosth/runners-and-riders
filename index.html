@@ -21,9 +21,10 @@
   <link rel="stylesheet" href="theme-attempt5.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt5">
   <link rel="stylesheet" href="theme-attempt6.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt6">
   <link rel="stylesheet" href="theme-attempt7.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt7">
+  <link rel="stylesheet" href="theme-attempt8.css?v=__COMMIT_SHA__" media="not all" id="theme-attempt8">
   <script>
     (function () {
-      var saved = localStorage.getItem('design-theme') || 'attempt7';
+      var saved = localStorage.getItem('design-theme') || 'attempt8';
       var link = document.getElementById('theme-' + saved);
       if (link) link.media = 'all';
     })();
@@ -48,6 +49,7 @@
           <option value="attempt5">ניסיון 5 — זכוכית מטושטשת · David Libre</option>
           <option value="attempt6">ניסיון 6 — זכוכית רציפה · David Libre</option>
           <option value="attempt7">ניסיון 7 — זכוכית חלקה (מעבר רציף) · David Libre</option>
+          <option value="attempt8">ניסיון 8 — זכוכית עם השתקפות אחידה · David Libre</option>
         </select>
       </div>
       <div class="control-row">
@@ -101,10 +103,10 @@
     // already activated the saved theme; this only wires up live
     // switching.
     (function () {
-      var THEMES = ['baseline', 'attempt1', 'attempt2', 'attempt3', 'attempt4', 'attempt5', 'attempt6', 'attempt7'];
+      var THEMES = ['baseline', 'attempt1', 'attempt2', 'attempt3', 'attempt4', 'attempt5', 'attempt6', 'attempt7', 'attempt8'];
       var sel = document.getElementById('theme-select');
       if (!sel) return;
-      sel.value = localStorage.getItem('design-theme') || 'attempt7';
+      sel.value = localStorage.getItem('design-theme') || 'attempt8';
       sel.addEventListener('change', function () {
         var name = sel.value;
         THEMES.forEach(function (t) {
