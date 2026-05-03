@@ -162,9 +162,35 @@ them instantly; selection is persisted in `localStorage` under the key
   with side-only insets, mirrored on both halves. The flap's
   bottom edge and the bottom half's top edge no longer get extra
   brightening that wouldn't continue across the seam.
-- Net: the cell reads as one continuous piece of frosted glass
-  with the letter set into it, instead of two separate plates.
-  Flip animation still works — the flap is its own animated
-  element, just visually indistinguishable from the bottom half at
-  rest.
-- Default theme is now `attempt7`. Attempts 1–6 stay selectable.
+- **Feedback:** still reads as two halves — the *overall*
+  brightness of the top is higher than the bottom because the
+  highlights live on `.flap` / `.half.top` and never reach the
+  bottom half. Need the highlight effect itself to fade smoothly
+  across the seam.
+
+## Attempt 8: Cell-spanning highlight overlay
+
+- **`b20ee52`** — *Design Attempt 8: cell-spanning highlight overlay*
+- Lifts every glass highlight off the per-half elements (which
+  are physically constrained to the upper or lower 50 % of the
+  cell) onto a single `.cell::before` overlay that spans the full
+  cell. Brightness now tapers continuously from top to bottom with
+  no half-vs-half step.
+- Highlights on `.cell::before`:
+  - Sharp specular `0%–7%` of cell.
+  - Sky-glow ellipse `130% × 60%` at `50% / 0%` — height in cell
+    units this time, so it fades through the seam.
+  - Lens highlight ellipse `55% × 50%` at `50% / 30%` — its faded
+    edges extend well past the seam.
+  - Top-edge inset (2 px white) + side inner glows (left + right)
+    now span the whole cell via `box-shadow`.
+- `.half` / `.flap` drop their highlight gradients and side glows
+  entirely — now just translucent base tint + `backdrop-filter`
+  blur.
+- `.flap` z-index 2 → 1 so the new overlay (z-index 2) paints
+  over it just like over the static halves; `.letter` stays at 3.
+- Side effect: during the flip animation the highlights stay still
+  while the flap rotates underneath — actually reads as more
+  realistic glass (environmental reflections don't move with a
+  falling tile).
+- Default theme is now `attempt8`. Attempts 1–7 stay selectable.
