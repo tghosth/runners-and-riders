@@ -79,5 +79,27 @@ them instantly; selection is persisted in `localStorage` under the key
   Hebrew-serif lineage as Bellefair / Koren, but with a proper bold
   weight that's much clearer at the large board sizes. Cell / flap /
   letter overlays all use 700 explicitly.
-- Default theme is now `attempt3`. Attempts 1 and 2 remain
-  selectable from the עיצוב dropdown for comparison.
+- **Feedback:** still reads as plastic; want it more glassy.
+
+## Attempt 4: Actually-translucent glass
+
+- **`43b21b9`** — *Design Attempt 4: actually-translucent glass*
+- Same cool palette and David Libre 700 as Attempt 3. The big move
+  is genuine translucency: the cells let the wood frame underneath
+  show through, instead of opaque gradients pretending to be glass.
+- New RGB-triplet vars (`--flap-light-rgb` etc.) so the half / flap
+  rules can drop them into `rgba()` at runtime.
+- `.cell` background: solid `--walnut-dark` → `transparent`. The
+  `.display-frame`'s wood gradient is now what's behind every cell.
+- `.half` / `.flap` base gradients use `rgba()` at alpha 0.86–0.94
+  so ~10–14 % of the wood bleeds through. Subtle but measurable —
+  this is what reads as "glass over wood" instead of "tile on wood".
+- Specular highlights pushed harder: top linear band tightened to
+  0–14 % at alpha 0.7 (was 0–18 % at 0.55), plus a 14 px / 0.18
+  inner-glow inset for a "lit from within" feel, plus a new
+  lens-style radial highlight (55 % × 65 % at 50 / 35) suggesting
+  the front face is slightly convex.
+- Bottom-half thickness emphasised: hairline bumped to alpha 0.12,
+  inner shadow extended to 4 px / 0.08.
+- Default theme is now `attempt4`. Attempts 1–3 stay selectable for
+  comparison.
