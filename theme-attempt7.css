@@ -1,30 +1,43 @@
 :root {
-  /* Jerusalem stone palette — muted, dusty, aged */
-  --stone-bg: #e8e0cf;
-  --stone-light: #d6cdb8;
-  --stone-mid: #c4b89f;
-  --stone-shadow: #a99b80;
-  --stone-deep: #82725a;
-  --ochre: #786545;
-  --walnut: #3a2f26;
-  --walnut-dark: #241b14;
-  --ink: #1f1610;
-  --brass: #9c7f4a;
+  /* Modern light-wood + frosted-glass palette. Var names kept from the
+     prior Jerusalem-stone design so downstream rules don't all need to
+     change; values retuned: cream surfaces, ash-wood frame, slate text,
+     champagne metal trim. The stone slab texture is no longer
+     referenced — flap faces are smooth gradients. */
+  --stone-bg: #f3eee5;        /* page bg / coolest cream */
+  --stone-light: #ebe4d6;     /* control surface */
+  --stone-mid: #d8c8a8;       /* light ash wood */
+  --stone-shadow: #b89c70;    /* mid wood */
+  --stone-deep: #8a6f48;      /* wood shadow */
+  --ochre: #95896c;           /* muted earth accent */
+  --walnut: #494d57;          /* slate */
+  --walnut-dark: #2c2e34;     /* deep slate (frame inner) */
+  --ink: #1f2024;             /* text */
+  --brass: #b8af90;           /* champagne / brushed metal */
 
-  /* Jerusalem stone slab texture — shared across every flap face so each
-     cell looks cut from the same piece. Each cell randomises its
-     background-position via --bg-x / --bg-y for natural variation.
-     Source: 1024×1024 seamless meleke photo (CC0, ChatGPT-generated). */
-  --stone-texture: url("stone.jpg?v=__COMMIT_SHA__");
-  --stone-tile: 360px 360px;
+  /* Glass flap face — same cool palette as Attempt 3 but expressed as
+     RGB triplets too so the half / flap rules can drop them into
+     rgba() for genuine translucency. The flap faces let ~12% of the
+     wood frame show through, which is what reads as "glass over wood"
+     instead of "painted tile over wood". */
+  --flap-light: #f4f6f2;
+  --flap-mid: #dde0db;
+  --flap-deep: #babfb8;
+  --flap-light-rgb: 244, 246, 242;
+  --flap-mid-rgb: 221, 224, 219;
+  --flap-deep-rgb: 186, 191, 184;
 
   /* Cells flex to fill the frame so the whole board always fits the
      viewport with no horizontal scroll. Hard cap is 13 cells across
      (MAX_COLS in app.js); rows are padded so every row has the same
      count, keeping cell width uniform. Per-cell sizing (width / height
      / font-size) is derived from the cell's own size via container
-     queries — no --cell-w / --cell-h vars needed. */
-  --cell-gap: 4px;
+     queries — no --cell-w / --cell-h vars needed.
+     Attempt 6: gap dropped back to 0 — Hebrew strings read more
+     fluidly when adjacent cells touch. The frosted-glass effect
+     still works because backdrop-filter blurs the wood under each
+     cell, which is present whether or not gaps expose it. */
+  --cell-gap: 0px;
 }
 
 * { box-sizing: border-box; }
@@ -33,12 +46,12 @@ html, body {
   margin: 0;
   padding: 0;
   background:
-    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.18) 0%, transparent 45%),
-    radial-gradient(circle at 70% 70%, rgba(120,101,69,0.08) 0%, transparent 55%),
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.55) 0%, transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(184,156,112,0.10) 0%, transparent 60%),
     var(--stone-bg);
   background-attachment: fixed;
   color: var(--ink);
-  font-family: 'Frank Ruhl Libre', 'Times New Roman', serif;
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
   min-height: 100vh;
 }
 
@@ -51,15 +64,15 @@ main {
 
 /* ─── Display housing ────────────────────────────────────────── */
 .display-frame {
-  background: linear-gradient(180deg, var(--walnut) 0%, var(--walnut-dark) 100%);
-  border: 4px solid var(--ochre);
-  border-radius: 14px;
+  background: linear-gradient(180deg, var(--stone-mid) 0%, var(--stone-shadow) 100%);
+  border: 2px solid var(--brass);
+  border-radius: 18px;
   padding: clamp(0.75rem, 2vw, 1.5rem);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    inset 0 -2px 8px rgba(0,0,0,0.45),
-    0 8px 22px rgba(36, 27, 20, 0.3),
-    0 2px 4px rgba(0,0,0,0.2);
+    inset 0 1px 0 rgba(255,255,255,0.55),
+    inset 0 -2px 6px rgba(138,111,72,0.25),
+    0 12px 28px rgba(60, 50, 35, 0.18),
+    0 2px 6px rgba(0,0,0,0.10);
   overflow: hidden;
   margin-bottom: 1.5rem;
   /* Sized container so the smaller header flaps below can be expressed
@@ -80,8 +93,7 @@ main {
   flex-direction: column;
   align-items: stretch;
   gap: var(--cell-gap);
-  margin-bottom: calc(var(--cell-gap) * 3);
-  padding: 0 0.15rem;
+  margin-bottom: 6px;
   min-width: 0;
 }
 
@@ -144,8 +156,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--cell-gap);
-  margin-top: calc(var(--cell-gap) * 3);
-  padding: 0 0.15rem;
+  margin-top: 6px;
   min-width: 0;
 }
 
@@ -179,15 +190,13 @@ main {
   aspect-ratio: 3 / 4;
   /* Establish a containment context so descendants can size with cqw/cqi. */
   container-type: inline-size;
-  background: var(--walnut-dark);
-  border-radius: 4px;
-  box-shadow:
-    inset 0 0 0 1px rgba(0,0,0,0.45),
-    inset 0 0 3px rgba(0,0,0,0.5);
-  /* Force the cell to its own stacking context so the .letter overlay
-     reliably paints above the half-seam shadows regardless of which
-     descendants the browser composites on separate layers. */
-  isolation: isolate;
+  /* Cell is transparent so backdrop-filter on the half / flap layers
+     can blur the .display-frame's wood gradient behind them — that's
+     the actual frosted-glass effect. `isolation: isolate` is dropped
+     so the backdrop-filter sees through to the frame; .letter still
+     paints above .flap because both are positioned with explicit
+     z-index. */
+  background: transparent;
 }
 
 .cell .half {
@@ -199,42 +208,42 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Explicit z-index keeps the halves below the .letter overlay even on
-     browsers that composite descendants onto separate layers. */
   z-index: 0;
   /* 93cqi ≈ 0.7 × cell-height (cell aspect 3:4, height = 4/3 × width). */
   font-size: 93cqi;
   line-height: 1;
   font-weight: 700;
   color: var(--ink);
-  background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.72) 0%, rgba(220,205,178,0.50) 100%),
-    var(--stone-texture);
-  background-size: auto, var(--stone-tile);
-  background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
-  background-repeat: no-repeat, repeat;
   user-select: none;
-  /* Chiselled-groove shadow: deeper dark above + brighter highlight below
-     read more clearly against the lighter stone face. */
-  text-shadow:
-    0 -1px 1px rgba(0, 0, 0, 0.75),
-    0  1px 1px rgba(255, 250, 235, 0.90),
-    0  0   2px rgba(0, 0, 0, 0.20);
 }
 
 .cell .half.top {
   top: 0;
-  border-radius: 4px 4px 0 0;
-  background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
-    var(--stone-texture);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  backdrop-filter: blur(10px) saturate(115%);
+  background:
+    /* Sharp specular at the very top — overhead light catching the
+       polished front edge of the glass. */
+    linear-gradient(180deg, rgba(255,255,255,0.65) 0%, transparent 14%),
+    /* Soft ambient sky-glow across the upper third. */
+    radial-gradient(ellipse 130% 80% at 50% 0%, rgba(255,255,255,0.35) 0%, transparent 70%),
+    /* Lens-style central highlight — slightly convex front face. */
+    radial-gradient(ellipse 55% 65% at 50% 35%, rgba(255,255,255,0.18) 0%, transparent 70%),
+    /* Translucent tint over the blurred wood — much lower alpha than
+       Attempt 4 (0.55–0.65 vs 0.86–0.90) so the backdrop-filter blur
+       is the dominant material reading. */
+    /* Base tint: alpha matches the bottom half's seam value (0.62)
+       so flap-mid reads as the same colour either side of the
+       seam — no light/dark step at the meeting line. */
+    linear-gradient(180deg, rgba(var(--flap-light-rgb), 0.55) 0%, rgba(var(--flap-mid-rgb), 0.62) 100%);
+  /* Inner glow restricted to the left/right sides only (no top or
+     bottom inset) so the flap's bottom edge doesn't get extra
+     brightening that wouldn't continue into the bottom half. */
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.95),
+    inset 6px 0 14px -4px rgba(255,255,255,0.18),
+    inset -6px 0 14px -4px rgba(255,255,255,0.18);
   align-items: flex-end;
-  /* No seam in the static state — the line was reading as cutting
-     through the letter even with the .letter overlay z-indexed above
-     it (anti-aliased glyph edges let a 0.05–0.15 alpha line bleed
-     through the centre of the character). The .flap element keeps
-     its own border-bottom so the seam still reads during the flip
-     animation. */
 }
 
 .cell .half.top span {
@@ -243,17 +252,23 @@ main {
 
 .cell .half.bottom {
   bottom: 0;
-  border-radius: 0 0 4px 4px;
-  background-image:
-    linear-gradient(180deg, rgba(220,205,178,0.55) 0%, rgba(180,160,130,0.45) 100%),
-    var(--stone-texture);
-  /* Deterministic offset from the top so the bottom half shows a *different*
-     slice of the slab (otherwise both halves mirror identical pixels). */
-  background-position:
-    0 0,
-    calc(var(--bg-x, 0%) + 37%) calc(var(--bg-y, 0%) + 53%);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  backdrop-filter: blur(10px) saturate(115%);
+  /* Sub-reflection at the top of the bottom half removed — it was
+     creating a bright band right below the seam and breaking the
+     visual continuity. The base tint starts at the same flap-mid /
+     0.62 the flap ends with so the seam is now a smooth handoff. */
+  background:
+    linear-gradient(180deg, rgba(var(--flap-mid-rgb), 0.62) 0%, rgba(var(--flap-deep-rgb), 0.72) 100%);
+  /* Side inner glow mirrors the flap's so the left/right edges
+     glow consistently across the seam. Bottom retains hairline +
+     thickness shadow. */
+  box-shadow:
+    inset 6px 0 14px -4px rgba(255,255,255,0.18),
+    inset -6px 0 14px -4px rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.14),
+    inset 0 -4px 5px rgba(0,0,0,0.08);
   align-items: flex-start;
-  /* No inset shadow on the top edge — see the comment on .half.top. */
 }
 
 .cell .half.bottom span {
@@ -267,26 +282,32 @@ main {
   right: 0;
   top: 0;
   height: 50%;
-  background-image:
-    linear-gradient(180deg, rgba(255,247,228,0.80) 0%, rgba(220,205,178,0.55) 100%),
-    var(--stone-texture);
-  background-size: auto, var(--stone-tile);
-  background-position: 0 0, var(--bg-x, 0%) var(--bg-y, 0%);
-  background-repeat: no-repeat, repeat;
-  border-radius: 4px 4px 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  -webkit-backdrop-filter: blur(10px) saturate(115%);
+  backdrop-filter: blur(10px) saturate(115%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.65) 0%, transparent 14%),
+    radial-gradient(ellipse 130% 80% at 50% 0%, rgba(255,255,255,0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 65% at 50% 35%, rgba(255,255,255,0.18) 0%, transparent 70%),
+    /* Same base alpha as .half.top so the flap → .half.bottom
+       handoff at the seam reads as one continuous gradient. */
+    linear-gradient(180deg, rgba(var(--flap-light-rgb), 0.55) 0%, rgba(var(--flap-mid-rgb), 0.62) 100%);
+  /* Side-only inner glow mirrors .half.top so the seam isn't
+     brightened from the flap side either. */
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.95),
+    inset 6px 0 14px -4px rgba(255,255,255,0.18),
+    inset -6px 0 14px -4px rgba(255,255,255,0.18);
+  /* Border-bottom dropped to alpha 0.04 — barely visible at rest
+     so the seam doesn't read as a hard line, but still defines
+     the falling flap's bottom edge during the flip animation. */
+  border-bottom: 1px solid rgba(0,0,0,0.04);
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  /* 93cqi ≈ 0.7 × cell-height (cell aspect 3:4, height = 4/3 × width). */
   font-size: 93cqi;
   line-height: 1;
   font-weight: 700;
   color: var(--ink);
-  text-shadow:
-    0 -1px 1px rgba(0, 0, 0, 0.75),
-    0  1px 1px rgba(255, 250, 235, 0.90),
-    0  0   2px rgba(0, 0, 0, 0.20);
   overflow: hidden;
   transform-origin: 50% 100%;
   z-index: 2;
@@ -323,10 +344,6 @@ main {
   pointer-events: none;
   user-select: none;
   z-index: 3;
-  text-shadow:
-    0 -1px 1px rgba(0, 0, 0, 0.75),
-    0  1px 1px rgba(255, 250, 235, 0.90),
-    0  0   2px rgba(0, 0, 0, 0.20);
 }
 
 .cell.flipping .letter {
@@ -356,7 +373,7 @@ main {
 
 .controls input[type="date"],
 .controls select {
-  font-family: 'Frank Ruhl Libre', serif;
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
   font-size: 1.05rem;
   padding: 0.45rem 0.8rem;
   border: 1px solid var(--stone-deep);
@@ -381,7 +398,7 @@ main {
 }
 
 .controls button {
-  font-family: 'Frank Ruhl Libre', serif;
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
   font-weight: 700;
   font-size: 1.05rem;
   padding: 0.55rem 1.4rem;
@@ -440,7 +457,7 @@ main {
 }
 
 .hcal-nav button {
-  font-family: 'Frank Ruhl Libre', serif;
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
   background: transparent;
   border: 1px solid var(--stone-deep);
   border-radius: 6px;
@@ -477,7 +494,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Frank Ruhl Libre', serif;
+  font-family: 'David Libre', 'Times New Roman', Times, serif;
   font-size: 1rem;
   font-weight: 500;
   border-radius: 6px;
