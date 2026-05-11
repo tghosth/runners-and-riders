@@ -388,20 +388,21 @@
       holidayName, yaalehVeYavo, specialDay, alHaNisim, fastDay,
       roshChodesh, specialShabbat, shabbatMevarchim,
     } = info;
-    const row1 = holidayName || getParshaForDate(jsDate);
+    const parsha = getParshaForDate(jsDate);
     const talRow = isTalUMatar(hMonth, hDay) ? 'ותן טל ומטר' : 'ותן ברכה';
     const geshem = isMoridHaGeshem(hMonth, hDay) ? 'מוריד הגשם' : 'מוריד הטל';
 
-    // All "special day" markers stack ABOVE the parsha (or holidayName)
-    // so the visual hierarchy reads "what's notable about today" first
-    // and the weekly Torah reading sits underneath it.
+    // Parsha always shows first if present; special rows + holiday come after.
     const rows = [];
+    if (!holidayName && parsha) {
+      rows.push(parsha);
+    }
     if (specialShabbat)    rows.push(specialShabbat);
     if (shabbatMevarchim)  rows.push('שבת מברכים');
     if (specialDay)        rows.push(specialDay);
     if (fastDay)           rows.push(fastDay);
     if (roshChodesh)       rows.push('ראש חודש');
-    rows.push(row1);
+    if (holidayName)       rows.push(holidayName);
     if (yaalehVeYavo)      rows.push('יעלה ויבוא');
     if (alHaNisim)         rows.push('על הניסים');
     rows.push(talRow, geshem);

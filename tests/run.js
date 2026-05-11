@@ -149,13 +149,13 @@ console.log('\n── Liturgy.getDisplayText (max-row coincidence: Chanukah + R"
   const nonEmpty = rows.filter(Boolean);
   eq('non-empty rows', nonEmpty.length, 7);
   eq('total rows (padded to 7)', rows.length, 7);
-  // Specials stack ABOVE the parsha — Chanukah day, then ראש חודש,
-  // then the parsha, then the Amidah-flow rows below.
-  check('Chanukah row',   /חנוכה/.test(nonEmpty[0]),
+  // Parsha always comes first if present; specials follow.
+  // Parsha, then Chanukah, then ראש חודש, then Amidah-flow rows.
+  check('parsha row',     nonEmpty[0] === 'מקץ',
     `got ${JSON.stringify(nonEmpty[0])}`);
-  eq('Rosh Chodesh row',  nonEmpty[1], 'ראש חודש');
-  check('parsha row',     nonEmpty[2] === 'מקץ',
-    `got ${JSON.stringify(nonEmpty[2])}`);
+  check('Chanukah row',   /חנוכה/.test(nonEmpty[1]),
+    `got ${JSON.stringify(nonEmpty[1])}`);
+  eq('Rosh Chodesh row',  nonEmpty[2], 'ראש חודש');
   eq('יעלה ויבוא row',     nonEmpty[3], 'יעלה ויבוא');
   eq('al hanisim row',    nonEmpty[4], 'על הניסים');
   eq('tal row',           nonEmpty[5], 'ותן טל ומטר');

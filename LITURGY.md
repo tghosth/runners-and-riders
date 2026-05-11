@@ -27,21 +27,22 @@ and asserts no row overflows.
 
 ## Body row order
 
-Specials stack above the weekly parsha so the visual hierarchy reads
-"what's notable about today" first:
+The weekly parsha (if no major holiday) always appears first, followed by
+any special Shabbatot/days. If a major holiday exists, it follows the specials.
 
 | # | Row | Always shown? | Source |
 |---|-----|---------------|--------|
-| 1 | Special Shabbat (פרשת שקלים / זכור / פרה / החודש / שבת הגדול) | only on those Shabbatot | Hebcal `SPECIAL_SHABBAT` events, mapped to "פרשת ..." labels we own |
-| 2 | שבת מברכים | only on the Shabbat preceding Rosh Chodesh (except Tishrei) | Hebcal `SHABBAT_MEVARCHIM` flag (option `shabbatMevarchim: true`) |
-| 3 | specialDay (Chanukah / Purim / kept modern / kept minor) | only when the day matches an allowlisted event | see [Special days](#special-days) |
-| 4 | fastDay (צום גדליה / עשרה בטבת / תענית אסתר / צום י"ז בתמוז / תשעה באב / תענית בכורות) | only on those fasts | Hebcal `MAJOR_FAST` ∪ `MINOR_FAST`, EREV excluded |
-| 5 | ראש חודש | only on Rosh Chodesh | Hebcal `ROSH_CHODESH` flag |
-| 6 | **Holiday name OR weekly parsha** | always | see [Row 6 — holiday or parsha](#row-6--holiday-or-parsha) |
-| 7 | יעלה ויבוא | only on R"Ch / Yom Tov / Chol HaMoed | derived from steps above |
-| 8 | על הניסים | only on Chanukah / Purim | derived from specialDay being Chanukah or Purim |
-| 9 | ותן טל ומטר / ותן ברכה | always | see [Tal/matar](#-tn-tl-vmtr--tn-brkh) |
-| 10 | מוריד הגשם / מוריד הטל | always | see [Geshem/tal](#-mvryd-hgshm--mvryd-htl) |
+| 1 | **Weekly parsha** (if no major holiday) | only on non-holiday weeks | see [Row 1 — parsha](#row-1--parsha) |
+| 2 | Special Shabbat (פרשת שקלים / זכור / פרה / החודש / שבת הגדול) | only on those Shabbatot | Hebcal `SPECIAL_SHABBAT` events, mapped to "פרשת ..." labels we own |
+| 3 | שבת מברכים | only on the Shabbat preceding Rosh Chodesh (except Tishrei) | Hebcal `SHABBAT_MEVARCHIM` flag (option `shabbatMevarchim: true`) |
+| 4 | specialDay (Chanukah / Purim / kept modern / kept minor) | only when the day matches an allowlisted event | see [Special days](#special-days) |
+| 5 | fastDay (צום גדליה / עשרה בטבת / תענית אסתר / צום י"ז בתמוז / תשעה באב / תענית בכורות) | only on those fasts | Hebcal `MAJOR_FAST` ∪ `MINOR_FAST`, EREV excluded |
+| 6 | ראש חודש | only on Rosh Chodesh | Hebcal `ROSH_CHODESH` flag |
+| 7 | **Holiday name** (if major holiday) | only on Yom Tov / Chol HaMoed | see [Row 7 — holiday](#row-7--holiday) |
+| 8 | יעלה ויבוא | only on R"Ch / Yom Tov / Chol HaMoed | derived from steps above |
+| 9 | על הניסים | only on Chanukah / Purim | derived from specialDay being Chanukah or Purim |
+| 10 | ותן טל ומטר / ותן ברכה | always | see [Tal/matar](#-tn-tl-vmtr--tn-brkh) |
+| 11 | מוריד הגשם / מוריד הטל | always | see [Geshem/tal](#-mvryd-hgshm--mvryd-htl) |
 
 The body is padded to **at least 7 rows**; rows 1–5 and 7–8 only appear
 when the condition is true. The rare "Chanukah day 7 + Rosh Chodesh
@@ -50,29 +51,14 @@ real content; that's the maximum, locked in by a regression test.
 
 ---
 
-## Row 6 — Holiday or parsha
+## Row 1 — Parsha
 
-Row 6 shows a holiday name when one exists for the date, otherwise the
-weekly Torah portion for the upcoming Shabbat.
-
-### Holiday display
-
-1. Call `HebrewCalendar.calendar({ start, end, il: true, shabbatMevarchim: true })`
-   for the date.
-2. If any event has the `CHOL_HAMOED` flag → fixed Hebrew string:
-   - `חול המועד פסח` (12 chars)
-   - `ח המועד סוכות` (13 chars; abbreviates "חול" because the full form
-     overflows)
-   - `הושענא רבה` (10 chars; the 7th day of Sukkot Chol HaMoed has its
-     own well-known name and gets it via `HOLIDAY_OVERRIDES`)
-3. Else if any event has the `CHAG` flag (major Yom Tov) → `e.render('he')`
-   with niqqud stripped. Special case: Rosh Hashana day 1 comes back as
-   "ראש השנה 5787" — overridden to "ראש השנה א'" for symmetry with day 2.
-4. Else → fall through to the parsha logic below.
-
-### Parsha fallback
+The weekly Torah portion appears first if no major holiday is present for
+the date. If a major holiday exists, parsha is omitted entirely.
 
 Source: `@hebcal/core` v6 (`HebrewCalendar.calendar` with `il: true`).
+
+### Parsha logic
 
 1. Find the Shabbat of the week: if the selected date is not Saturday,
    advance to the next Saturday.
@@ -93,6 +79,28 @@ schedules in years where a Yom Tov falls on a weekday (e.g. Israel reads
   parsha.
 - `PARSHA_OVERRIDES` substitutes `אחרי מות־קדשים` (14 chars) → `אחרי מ־קדושים`
   (13 chars). Hebcal renders the combined parsha with a maqaf (U+05BE).
+
+---
+
+## Row 7 — Holiday
+
+A major holiday (Yom Tov, Chol HaMoed) appears in row 7, after any special
+Shabbatot/days, but only when a holiday exists. If no major holiday, this
+row is omitted entirely.
+
+### Holiday display
+
+1. Call `HebrewCalendar.calendar({ start, end, il: true, shabbatMevarchim: true })`
+   for the date.
+2. If any event has the `CHOL_HAMOED` flag → fixed Hebrew string:
+   - `חול המועד פסח` (12 chars)
+   - `ח המועד סוכות` (13 chars; abbreviates "חול" because the full form
+     overflows)
+   - `הושענא רבה` (10 chars; the 7th day of Sukkot Chol HaMoed has its
+     own well-known name and gets it via `HOLIDAY_OVERRIDES`)
+3. Else if any event has the `CHAG` flag (major Yom Tov) → `e.render('he')`
+   with niqqud stripped. Special case: Rosh Hashana day 1 comes back as
+   "ראש השנה 5787" — overridden to "ראש השנה א'" for symmetry with day 2.
 
 ---
 
