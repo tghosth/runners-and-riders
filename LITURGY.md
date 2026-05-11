@@ -44,10 +44,13 @@ any special Shabbatot/days. If a major holiday exists, it follows the specials.
 | 10 | ותן טל ומטר / ותן ברכה | always | see [Tal/matar](#-tn-tl-vmtr--tn-brkh) |
 | 11 | מוריד הגשם / מוריד הטל | always | see [Geshem/tal](#-mvryd-hgshm--mvryd-htl) |
 
-The body is padded to **at least 7 rows**; rows 1–5 and 7–8 only appear
-when the condition is true. The rare "Chanukah day 7 + Rosh Chodesh
-Tevet on Shabbat" coincidence (e.g. Sat 20 Dec 2025) fills all 7 with
-real content; that's the maximum, locked in by a regression test.
+The body is padded to **at least 7 rows**. Rows 1–9 are **conditional**
+(appear only when their specific conditions are met); rows 10–11 are
+**always present**. The maximum of 7 body rows occurs only when rows 1–8
+are all true simultaneously, which happens in the rare case of "Chanukah
+day 7 + Rosh Chodesh Tevet on Shabbat" (e.g. Sat 20 Dec 2025): parsha +
+specialDay (חנוקה ז') + ראש חודש + יעלה ויבוא + על הניסים + ותן טל ומטר
++ מוריד הגשם. This maximum is locked in by a regression test.
 
 ---
 
