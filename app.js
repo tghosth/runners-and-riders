@@ -29,6 +29,23 @@
   // second instead of every minute).
   const SHOW_SECONDS = new URLSearchParams(location.search).has('seconds');
 
+  // ?date=yyyymmdd in the URL sets the displayed Gregorian date (e.g. 20260511).
+  // Invalid dates are ignored; uses today instead.
+  const DATE_PARAM = new URLSearchParams(location.search).get('date');
+  let paramDate = null;
+  if (DATE_PARAM && /^\d{8}$/.test(DATE_PARAM)) {
+    const yyyy = parseInt(DATE_PARAM.slice(0, 4), 10);
+    const mm = parseInt(DATE_PARAM.slice(4, 6), 10);
+    const dd = parseInt(DATE_PARAM.slice(6, 8), 10);
+    const candidate = new Date(yyyy, mm - 1, dd);
+    if (candidate.getFullYear() === yyyy && candidate.getMonth() === mm - 1 && candidate.getDate() === dd) {
+      paramDate = candidate;
+    }
+  }
+
+  // ?theme=<name> in the URL selects a theme (e.g. attempt8, baseline).
+  const THEME_PARAM = new URLSearchParams(location.search).get('theme');
+
   const { HDate } = window.hebcal;
   const { getDisplayText, getOmerSection, splitBalancedLines } = window.Liturgy;
   // Pure calendar / Hebrew-math helpers extracted into core.js so the
@@ -966,7 +983,9 @@
 
   // Default to today in Jerusalem time, shifted to next Greg day after
   // Modi'in tzeit (so the Hebrew date rolls over at nightfall, not midnight).
-  const todayJs = getEffectiveTodayJs(getDisplayedTime());
+  // If ?date=yyyymmdd was provided, use that instead and exit live mode.
+  const todayJs = paramDate || getEffectiveTodayJs(getDisplayedTime());
+  if (paramDate) liveDateMode = false;
   syncGregSelectors(todayJs);
   syncGregToHebrew(todayJs);
   renderForDate(todayJs);
